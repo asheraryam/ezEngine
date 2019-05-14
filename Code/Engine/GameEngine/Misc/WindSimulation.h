@@ -31,7 +31,8 @@ private:
   void AddTimeScaled(float* pDst, const float* pSrc);
   void ClearBounds(float* pDst);
   void LinearSolve(float* pDst, const float* pPrev);
-  void Project(float* pDstU, float* pDstV, float* pScratchU, float* pScratchV);
+  void Project2D(float* pDstU, float* pDstV, float* pScratch1, float* pScratch2);
+  void Project3D(float* pDstU, float* pDstV, float* pDstW, float* pScratch1, float* pScratch2);
   void Advect(float* pDst, const float* pSrc);
 
   ezTime m_UpdateStep;
