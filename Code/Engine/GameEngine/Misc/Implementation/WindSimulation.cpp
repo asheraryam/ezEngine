@@ -3,11 +3,12 @@
 #include <Foundation/Profiling/Profiling.h>
 #include <GameEngine/Misc/WindSimulation.h>
 
- ezWindSimulation::ezWindSimulation() = default;
- ezWindSimulation::~ezWindSimulation() = default;
+ezWindSimulation::ezWindSimulation() = default;
+ezWindSimulation::~ezWindSimulation() = default;
 
- void ezWindSimulation::Initialize(ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ /*= 1*/)
+void ezWindSimulation::Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ /*= 1*/)
 {
+  m_fCellSize = fCellSize;
   m_UpdateStep = ezTime::Milliseconds(100);
 
   m_uiSizeX = uiSizeX;
@@ -58,9 +59,11 @@
   }
 }
 
-void ezWindSimulation::Step()
+void ezWindSimulation::Step(ezTime tDelta)
 {
   EZ_PROFILE_SCOPE("Wind Simulation");
+
+  // TODO: use tDelta to advance internal interpolation factor
 
   AddTimeScaled(m_pPrevVelocities[0], m_pVelocities[0]);
   // Diffuse(m_pPrevVelocities[0], m_pVelocities[0]);
@@ -127,8 +130,6 @@ void ezWindSimulation::ClearBounds(float* pDst)
 //{
 //  EZ_ASSERT_DEV(!IsVolumetric(), "not impl");
 //
-//  // TODO: unnecessary copy step, just swap pDst and pPrev (?)
-//
 //  ezMemoryUtils::Copy(pDst, pPrev, m_uiNumCells);
 //
 //  ClearBounds(pDst);
@@ -156,8 +157,7 @@ void ezWindSimulation::LinearSolve(float* pDst, const float* pPrev)
 
 void ezWindSimulation::Project(float* pDstU, float* pDstV, float* pScratch1, float* pScratch2)
 {
-  // TODO: non-square ?
-  const float fNorm = -0.5f / m_uiSizeX;
+  const float fNorm = -0.5f;
 
   for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
   {
@@ -173,8 +173,7 @@ void ezWindSimulation::Project(float* pDstU, float* pDstV, float* pScratch1, flo
 
   LinearSolve(pScratch1, pScratch2);
 
-  // TODO: non-square ?
-  const float fNorm2 = 0.5f * m_uiSizeX;
+  const float fNorm2 = 0.5f;
 
   for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
   {
@@ -191,7 +190,7 @@ void ezWindSimulation::Project(float* pDstU, float* pDstV, float* pScratch1, flo
 
 void ezWindSimulation::Advect(float* pDst, const float* pSrc)
 {
-  const float dt0 = m_UpdateStep.AsFloatInSeconds() * m_uiSizeX; // TODO: non-square ?
+  const float dt0 = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
 
   const float maxX = m_uiSizeX + 0.5f;
   const float maxY = m_uiSizeY + 0.5f;

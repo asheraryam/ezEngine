@@ -2,8 +2,8 @@
 
 #include <GameEngine/GameEngineDLL.h>
 
-#include <Foundation/Time/Time.h>
 #include <Foundation/Containers/DynamicArray.h>
+#include <Foundation/Time/Time.h>
 
 class EZ_GAMEENGINE_DLL ezWindSimulation
 {
@@ -11,13 +11,23 @@ public:
   ezWindSimulation();
   ~ezWindSimulation();
 
-  void Initialize(ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ = 1);
-  void Step();
+  void Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ = 1);
+  void Step(ezTime tDelta);
 
-  // private:
+  float GetCellSize() const { return m_fCellSize; }
+
+  ezUInt16 GetSizeX() const { return m_uiSizeX; }
+  ezUInt16 GetSizeY() const { return m_uiSizeY; }
+  ezUInt16 GetSizeZ() const { return m_uiSizeZ; }
+
   EZ_ALWAYS_INLINE ezUInt32 Idx(ezUInt16 x, ezUInt16 y, ezUInt16 z = 0) const { return m_uiIndexOffsetZ * z + m_uiIndexOffsetY * y + x; }
   EZ_ALWAYS_INLINE bool IsVolumetric() const { return m_uiSizeZ > 1; }
 
+  float* GetVelocitiesX() const { return m_pVelocities[0]; }
+  float* GetVelocitiesY() const { return m_pVelocities[1]; }
+  float* GetVelocitiesZ() const { return m_pVelocities[2]; }
+
+private:
   void AddTimeScaled(float* pDst, const float* pSrc);
   void ClearBounds(float* pDst);
   void LinearSolve(float* pDst, const float* pPrev);
@@ -25,6 +35,7 @@ public:
   void Advect(float* pDst, const float* pSrc);
 
   ezTime m_UpdateStep;
+  float m_fCellSize = 1.0f;
 
   ezUInt16 m_uiSizeX = 0;
   ezUInt16 m_uiSizeY = 0;

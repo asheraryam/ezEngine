@@ -1,15 +1,13 @@
 #include <GameEnginePCH.h>
 
+#include <Foundation/Profiling/Profiling.h>
 #include <GameEngine/Components/WindVolumeComponent.h>
 #include <RendererCore/Debug/DebugRenderer.h>
-#include <Foundation/Profiling/Profiling.h>
 
 void ezWindVolumeComponent::addStream(int x, int y, float force)
 {
-  float* u = m_Wind.m_pVelocities[0];
-  float* v = m_Wind.m_pVelocities[1];
-
-  const int N = m_Wind.m_uiSizeX;
+  float* u = m_Wind.GetVelocitiesX();
+  float* v = m_Wind.GetVelocitiesY();
 
   u[m_Wind.Idx(x + 1, y)] = +force;
   v[m_Wind.Idx(x + 1, y)] = 0;
@@ -22,10 +20,8 @@ void ezWindVolumeComponent::addStream(int x, int y, float force)
 
 void ezWindVolumeComponent::addDrop(int x, int y, float force)
 {
-  float* u = m_Wind.m_pVelocities[0];
-  float* v = m_Wind.m_pVelocities[1];
-
-  const int N = m_Wind.m_uiSizeX;
+  float* u = m_Wind.GetVelocitiesX();
+  float* v = m_Wind.GetVelocitiesY();
 
   u[m_Wind.Idx(x - 1, y)] = -force;
   u[m_Wind.Idx(x + 1, y)] = +force;
@@ -88,17 +84,13 @@ void ezWindVolumeComponent::OnSimulationStarted()
 {
   SUPER::OnSimulationStarted();
 
-  m_Wind.Initialize(128, 128);
+  m_Wind.Initialize(0.25f, 128, 128);
 }
 
 void ezWindVolumeComponent::Update()
 {
-  m_Wind.Step();
-
   ezRandom rng;
   rng.InitializeFromCurrentTime();
-
-  const int N = m_Wind.m_uiSizeX;
 
   {
     static int maxDrops = 20;
@@ -107,7 +99,8 @@ void ezWindVolumeComponent::Update()
       if (maxDrops > 0)
       {
         maxDrops--;
-        addDrop(rng.UIntInRange(N-4) + 2, rng.UIntInRange(N-4) + 2, rng.FloatMinMax(1.5f, 10.0f));
+        addDrop(rng.UIntInRange(m_Wind.GetSizeX() - 4) + 2, rng.UIntInRange(m_Wind.GetSizeY() - 4) + 2,
+          rng.FloatMinMax(m_Wind.GetCellSize() * 50.0f, m_Wind.GetCellSize() * 100.0f));
       }
     }
   }
@@ -118,35 +111,34 @@ void ezWindVolumeComponent::Update()
     if (maxStream > 0)
     {
       maxStream--;
-      addStream(10, 32, rng.FloatMinMax(0.05f, 0.1f));
+      addStream(10, 32, rng.FloatMinMax(m_Wind.GetCellSize() * 10.0f, m_Wind.GetCellSize() * 50.0f));
     }
   }
+
+  m_Wind.Step(ezTime::Milliseconds(100));
 
   // draw_velocity
   {
     EZ_PROFILE_SCOPE("draw_velocity");
 
-    int i, j;
-    float x, y, h;
-
-    h = 1.0f / N;
-
     ezDynamicArray<ezDebugRenderer::Line> lines;
-    lines.Reserve(N * N);
+    lines.Reserve(m_Wind.GetSizeX() * m_Wind.GetSizeY() * m_Wind.GetSizeZ());
 
-    const float* u = m_Wind.m_pVelocities[0];
-    const float* v = m_Wind.m_pVelocities[1];
+    const float* u = m_Wind.GetVelocitiesX();
+    const float* v = m_Wind.GetVelocitiesY();
 
-    for (i = 1; i <= N; i++)
+    const float h = m_Wind.GetCellSize();
+
+    for (int i = 1; i <= m_Wind.GetSizeX(); i++)
     {
-      x = (i - 0.5f) * h;
-      for (j = 1; j <= N; j++)
+      const float x = (i - 0.5f) * h;
+      for (int j = 1; j <= m_Wind.GetSizeY(); j++)
       {
-        y = (j - 0.5f) * h;
+        const float y = (j - 0.5f) * h;
 
         auto& l = lines.ExpandAndGetRef();
         l.m_start.Set(x, y, 0);
-        l.m_end.Set(x + u[m_Wind.Idx(i, j)], y + v[m_Wind.Idx(i, j)], 0);
+        l.m_end.Set(x + u[m_Wind.Idx(i, j)] * h * 5, y + v[m_Wind.Idx(i, j)] * h * 5, 0);
       }
     }
 
