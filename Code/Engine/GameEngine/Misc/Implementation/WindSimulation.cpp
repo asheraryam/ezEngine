@@ -2,6 +2,7 @@
 
 #include <Foundation/Profiling/Profiling.h>
 #include <GameEngine/Misc/WindSimulation.h>
+#include <Foundation/Math/Vec3.h>
 
 ezWindSimulation::ezWindSimulation() = default;
 ezWindSimulation::~ezWindSimulation() = default;
@@ -349,4 +350,96 @@ void ezWindSimulation::Advect(float* pDst, const float* pSrc)
       }
     }
   }
+}
+
+ezVec2 ezWindSimulation::SampleVelocity2D(const ezVec2& vCellIdx) const
+{
+  const float minX = 0.5f;
+  const float minY = 0.5f;
+  const float maxX = m_uiSizeX + 0.5f;
+  const float maxY = m_uiSizeY + 0.5f;
+
+  // clamp sample position to valid range
+  // allow border samples to enable fading result to zero
+  const float x = ezMath::Clamp(vCellIdx.x, minX, maxX);
+  const float y = ezMath::Clamp(vCellIdx.y, minY, maxY);
+
+  // bilinear interpolate from the 4 sample position cells
+  const ezUInt32 i0 = (ezUInt32)x;
+  const ezUInt32 i1 = i0 + 1;
+  const ezUInt32 j0 = (ezUInt32)y;
+  const ezUInt32 j1 = j0 + 1;
+
+  const float s1 = x - i0;
+  const float s0 = 1 - s1;
+  const float t1 = y - j0;
+  const float t0 = 1 - t1;
+
+  const ezUInt32 i0j0 = Idx(i0, j0);
+  const ezUInt32 i0j1 = Idx(i0, j1);
+  const ezUInt32 i1j0 = Idx(i1, j0);
+  const ezUInt32 i1j1 = Idx(i1, j1);
+
+  auto sampleComponent = [=](const float* pSrc) -> float {
+    return s0 * (t0 * pSrc[i0j0] + t1 * pSrc[i0j1]) + s1 * (t0 * pSrc[i1j0] + t1 * pSrc[i1j1]);
+  };
+
+  ezVec2 res;
+  res.x = sampleComponent(m_pVelocities[0]);
+  res.y = sampleComponent(m_pVelocities[1]);
+
+  return res;
+}
+
+ezVec3 ezWindSimulation::SampleVelocity3D(const ezVec3& vCellIdx) const
+{
+  const float minX = 0.5f;
+  const float minY = 0.5f;
+  const float minZ = 0.5f;
+  const float maxX = m_uiSizeX + 0.5f;
+  const float maxY = m_uiSizeY + 0.5f;
+  const float maxZ = m_uiSizeZ + 0.5f;
+
+  // clamp sample position to valid range
+  // allow border samples to enable fading result to zero
+  const float x = ezMath::Clamp(vCellIdx.x, minX, maxX);
+  const float y = ezMath::Clamp(vCellIdx.y, minY, maxY);
+  const float z = ezMath::Clamp(vCellIdx.z, minZ, maxZ);
+
+  // trilinear interpolate from the 8 sample position cells
+  const ezUInt32 i0 = (ezUInt32)x;
+  const ezUInt32 i1 = i0 + 1;
+  const ezUInt32 j0 = (ezUInt32)y;
+  const ezUInt32 j1 = j0 + 1;
+  const ezUInt32 k0 = (ezUInt32)z;
+  const ezUInt32 k1 = k0 + 1;
+
+  const float s1 = x - i0;
+  const float s0 = 1 - s1;
+  const float t1 = y - j0;
+  const float t0 = 1 - t1;
+  const float r1 = z - k0;
+  const float r0 = 1 - r1;
+
+  const ezUInt32 i0j0k0 = Idx(i0, j0, k0);
+  const ezUInt32 i0j0k1 = Idx(i0, j0, k1);
+  const ezUInt32 i0j1k0 = Idx(i0, j1, k0);
+  const ezUInt32 i0j1k1 = Idx(i0, j1, k1);
+  const ezUInt32 i1j0k0 = Idx(i1, j0, k0);
+  const ezUInt32 i1j0k1 = Idx(i1, j0, k1);
+  const ezUInt32 i1j1k0 = Idx(i1, j1, k0);
+  const ezUInt32 i1j1k1 = Idx(i1, j1, k1);
+
+  auto sampleComponent = [=](const float* pSrc) -> float
+  {
+    return r0 * (s0 * (t0 * pSrc[i0j0k0] + t1 * pSrc[i0j1k0]) + s1 * (t0 * pSrc[i1j0k0] + t1 * pSrc[i1j1k0])) +
+           r1 * (s0 * (t0 * pSrc[i0j0k1] + t1 * pSrc[i0j1k1]) + s1 * (t0 * pSrc[i1j0k1] + t1 * pSrc[i1j1k1]));
+  };
+
+  ezVec3 res;
+  res.x = sampleComponent(m_pVelocities[0]);
+  res.y = sampleComponent(m_pVelocities[1]);
+  res.z = sampleComponent(m_pVelocities[2]);
+
+  return res;  
 }

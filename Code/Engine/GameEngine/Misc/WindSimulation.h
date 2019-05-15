@@ -4,6 +4,7 @@
 
 #include <Foundation/Containers/DynamicArray.h>
 #include <Foundation/Time/Time.h>
+#include <Foundation/Math/Declarations.h>
 
 class EZ_GAMEENGINE_DLL ezWindSimulation
 {
@@ -26,6 +27,9 @@ public:
   float* GetVelocitiesX() const { return m_pVelocities[0]; }
   float* GetVelocitiesY() const { return m_pVelocities[1]; }
   float* GetVelocitiesZ() const { return m_pVelocities[2]; }
+
+  ezVec2 SampleVelocity2D(const ezVec2& vCellIdx) const;
+  ezVec3 SampleVelocity3D(const ezVec3& vCellIdx) const;
 
 private:
   void CopyPreviousVelocity(float* pDst, const float* pSrc);
