@@ -86,7 +86,7 @@ void ezWindVolumeComponent::OnSimulationStarted()
 {
   SUPER::OnSimulationStarted();
 
-  m_Wind.Initialize(0.25f, 64, 64, 8);
+  m_Wind.Initialize(0.25f, 64, 64, 16);
 }
 
 void ezWindVolumeComponent::Update()
@@ -101,7 +101,7 @@ void ezWindVolumeComponent::Update()
       if (maxDrops > 0)
       {
         maxDrops--;
-        //addDrop(rng.UIntInRange(m_Wind.GetSizeX() - 4) + 2, rng.UIntInRange(m_Wind.GetSizeY() - 4) + 2, rng.FloatMinMax(m_Wind.GetCellSize() * 50.0f, m_Wind.GetCellSize() * 100.0f));
+        addDrop(rng.UIntInRange(m_Wind.GetSizeX() - 4) + 2, rng.UIntInRange(m_Wind.GetSizeY() - 4) + 2, rng.FloatMinMax(m_Wind.GetCellSize() * 1000.0f, m_Wind.GetCellSize() * 10000.0f));
       }
     }
   }
@@ -112,7 +112,7 @@ void ezWindVolumeComponent::Update()
     if (maxStream > 0)
     {
       maxStream--;
-      addStream(10, 32, rng.FloatMinMax(m_Wind.GetCellSize() * 1000.0f, m_Wind.GetCellSize() * 1100.0f));
+      addStream(10, 32, rng.FloatMinMax(m_Wind.GetCellSize() * 20.0f, m_Wind.GetCellSize() * 100.0f));
     }
   }
 

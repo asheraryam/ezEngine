@@ -28,8 +28,7 @@ public:
   float* GetVelocitiesZ() const { return m_pVelocities[2]; }
 
 private:
-  void AddTimeScaled(float* pDst, const float* pSrc);
-  void ClearBounds(float* pDst);
+  void CopyPreviousVelocity(float* pDst, const float* pSrc);
   void LinearSolve(float* pDst, const float* pPrev);
   void Project2D(float* pDstU, float* pDstV, float* pScratch1, float* pScratch2);
   void Project3D(float* pDstU, float* pDstV, float* pDstW, float* pScratch1, float* pScratch2);

@@ -6,6 +6,33 @@
 ezWindSimulation::ezWindSimulation() = default;
 ezWindSimulation::~ezWindSimulation() = default;
 
+#if 1
+
+// uses the empty boundary to affect the simulation
+
+#define ClampMinX 0
+#define ClampMaxX (m_uiSizeX+1)
+#define ClampMinY 0
+#define ClampMaxY (m_uiSizeY+1)
+#define ClampMinZ 0
+#define ClampMaxZ (m_uiSizeZ+1)
+#define ClampOffset 0.0f
+
+#else
+
+// clamps sampling points to the inner values (no boundary)
+
+#define ClampMinX 1
+#define ClampMaxX (m_uiSizeX)
+#define ClampMinY 1
+#define ClampMaxY (m_uiSizeY)
+#define ClampMinZ 1
+#define ClampMaxZ (m_uiSizeZ)
+#define ClampOffset 1.0f
+
+#endif
+
+
 void ezWindSimulation::Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ /*= 1*/)
 {
   m_fCellSize = fCellSize;
@@ -65,12 +92,12 @@ void ezWindSimulation::Step(ezTime tDelta)
 
   // TODO: use tDelta to advance internal interpolation factor
 
-  AddTimeScaled(m_pPrevVelocities[0], m_pVelocities[0]);
-  AddTimeScaled(m_pPrevVelocities[1], m_pVelocities[1]);
+  CopyPreviousVelocity(m_pPrevVelocities[0], m_pVelocities[0]);
+  CopyPreviousVelocity(m_pPrevVelocities[1], m_pVelocities[1]);
 
   if (IsVolumetric())
   {
-    AddTimeScaled(m_pPrevVelocities[2], m_pVelocities[2]);
+    CopyPreviousVelocity(m_pPrevVelocities[2], m_pVelocities[2]);
     Project3D(m_pPrevVelocities[0], m_pPrevVelocities[1], m_pPrevVelocities[2], m_pVelocities[0], m_pVelocities[1]);
   }
   else
@@ -92,80 +119,15 @@ void ezWindSimulation::Step(ezTime tDelta)
   }
 }
 
-void ezWindSimulation::AddTimeScaled(float* pDst, const float* pSrc)
+void ezWindSimulation::CopyPreviousVelocity(float* pDst, const float* pSrc)
 {
-  const float fScale = m_UpdateStep.AsFloatInSeconds();
-  const float fDampening = 1.0f; // 0.99f
+  const float fDampening = 0.995f;
+  //const float fDampening = 1.0f;
 
   for (ezUInt32 i = 0; i < m_uiNumCells; ++i)
   {
-    pDst[i] = fDampening * pSrc[i] + fScale * pDst[i];
+    pDst[i] = pSrc[i] * fDampening;
   }
-
-  ClearBounds(pDst);
-}
-
-void ezWindSimulation::ClearBounds(float* pDst)
-{
-  // 3D wall condition
-  {
-    // for (int j = 1; j < N - 1; j++)
-    //{
-    //  for (int i = 1; i < N - 1; i++)
-    //  {
-    //    x[IX(i, j, 0)] = b == 3 ? -x[IX(i, j, 1)] : x[IX(i, j, 1)];
-    //    x[IX(i, j, N - 1)] = b == 3 ? -x[IX(i, j, N - 2)] : x[IX(i, j, N - 2)];
-    //  }
-    //}
-    // for (int k = 1; k < N - 1; k++)
-    //{
-    //  for (int i = 1; i < N - 1; i++)
-    //  {
-    //    x[IX(i, 0, k)] = b == 2 ? -x[IX(i, 1, k)] : x[IX(i, 1, k)];
-    //    x[IX(i, N - 1, k)] = b == 2 ? -x[IX(i, N - 2, k)] : x[IX(i, N - 2, k)];
-    //  }
-    //}
-    // for (int k = 1; k < N - 1; k++)
-    //{
-    //  for (int j = 1; j < N - 1; j++)
-    //  {
-    //    x[IX(0, j, k)] = b == 1 ? -x[IX(1, j, k)] : x[IX(1, j, k)];
-    //    x[IX(N - 1, j, k)] = b == 1 ? -x[IX(N - 2, j, k)] : x[IX(N - 2, j, k)];
-    //  }
-    //}
-
-    // x[IX(0, 0, 0)] = 0.33f * (x[IX(1, 0, 0)] + x[IX(0, 1, 0)] + x[IX(0, 0, 1)]);
-    // x[IX(0, N - 1, 0)] = 0.33f * (x[IX(1, N - 1, 0)] + x[IX(0, N - 2, 0)] + x[IX(0, N - 1, 1)]);
-    // x[IX(0, 0, N - 1)] = 0.33f * (x[IX(1, 0, N - 1)] + x[IX(0, 1, N - 1)] + x[IX(0, 0, N)]);
-    // x[IX(0, N - 1, N - 1)] = 0.33f * (x[IX(1, N - 1, N - 1)] + x[IX(0, N - 2, N - 1)] + x[IX(0, N - 1, N - 2)]);
-    // x[IX(N - 1, 0, 0)] = 0.33f * (x[IX(N - 2, 0, 0)] + x[IX(N - 1, 1, 0)] + x[IX(N - 1, 0, 1)]);
-    // x[IX(N - 1, N - 1, 0)] = 0.33f * (x[IX(N - 2, N - 1, 0)] + x[IX(N - 1, N - 2, 0)] + x[IX(N - 1, N - 1, 1)]);
-    // x[IX(N - 1, 0, N - 1)] = 0.33f * (x[IX(N - 2, 0, N - 1)] + x[IX(N - 1, 1, N - 1)] + x[IX(N - 1, 0, N - 2)]);
-    // x[IX(N - 1, N - 1, N - 1)] = 0.33f * (x[IX(N - 2, N - 1, N - 1)] + x[IX(N - 1, N - 2, N - 1)] + x[IX(N - 1, N - 1, N - 2)]);
-  }
-
-  // if (IsVolumetric())
-  //{
-  //  EZ_ASSERT_NOT_IMPLEMENTED;
-  //}
-  // else
-  //{
-  //  for (ezUInt16 i = 0; i < m_uiSizeX; ++i)
-  //  {
-  //    pDst[Idx(i, 0, 0)] = 0;
-  //  }
-
-  //  for (ezUInt16 i = 1; i < m_uiSizeY + 1; ++i)
-  //  {
-  //    pDst[Idx(0, i, 0)] = 0;
-  //    pDst[Idx(m_uiSizeX + 1, i, 0)] = 0;
-  //  }
-
-  //  for (ezUInt16 i = 0; i < m_uiSizeX; ++i)
-  //  {
-  //    pDst[Idx(i, m_uiSizeY + 1, 0)] = 0;
-  //  }
-  //}
 }
 
 void ezWindSimulation::LinearSolve(float* pDst, const float* pPrev)
@@ -176,20 +138,27 @@ void ezWindSimulation::LinearSolve(float* pDst, const float* pPrev)
   {
     for (ezUInt32 k = 0; k < uiNumIterations; k++)
     {
-      for (ezUInt32 z = 1; z <= m_uiSizeZ; ++z)
+      for (ezInt32 z = 1; z <= m_uiSizeZ; ++z)
       {
-        for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
+        const ezInt32 zm = ezMath::Max<ezInt32>(z - 1, ClampMinZ);
+        const ezInt32 zp = ezMath::Min<ezInt32>(z + 1, ClampMaxZ);
+
+        for (ezInt32 y = 1; y <= m_uiSizeY; ++y)
         {
-          for (ezUInt32 x = 1; x <= m_uiSizeX; ++x)
+          const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+          const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
+          for (ezInt32 x = 1; x <= m_uiSizeX; ++x)
           {
-            pDst[Idx(x, y, z)] = (pPrev[Idx(x, y, z)] + (pDst[Idx(x - 1, y, z)] + pDst[Idx(x + 1, y, z)] + pDst[Idx(x, y - 1, z)] +
-                                                          pDst[Idx(x, y + 1, z)] + pDst[Idx(x, y, z - 1)] + pDst[Idx(x, y, z + 1)])) /
+            const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+            const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
+            pDst[Idx(x, y, z)] = (pPrev[Idx(x, y, z)] + (pDst[Idx(xm, y, z)] + pDst[Idx(xp, y, z)] + pDst[Idx(x, ym, z)] +
+                                                          pDst[Idx(x, yp, z)] + pDst[Idx(x, y, zm)] + pDst[Idx(x, y, zp)])) /
                                  6.0f;
           }
         }
       }
-
-      ClearBounds(pDst);
     }
   }
   else
@@ -198,15 +167,18 @@ void ezWindSimulation::LinearSolve(float* pDst, const float* pPrev)
     {
       for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
       {
+        const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+        const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
         for (ezUInt32 x = 1; x <= m_uiSizeX; ++x)
         {
+          const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+          const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
           pDst[Idx(x, y, 0)] =
-            (pPrev[Idx(x, y, 0)] + (pDst[Idx(x - 1, y, 0)] + pDst[Idx(x + 1, y, 0)] + pDst[Idx(x, y - 1, 0)] + pDst[Idx(x, y + 1, 0)])) *
-            0.25f;
+            (pPrev[Idx(x, y, 0)] + (pDst[Idx(xm, y, 0)] + pDst[Idx(xp, y, 0)] + pDst[Idx(x, ym, 0)] + pDst[Idx(x, yp, 0)])) * 0.25f;
         }
       }
-
-      ClearBounds(pDst);
     }
   }
 }
@@ -217,13 +189,17 @@ void ezWindSimulation::Project2D(float* pDstU, float* pDstV, float* pScratch1, f
 
   for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
   {
+    const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+    const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
     for (ezUInt32 x = 1; x <= m_uiSizeX; ++x)
     {
-      pScratch2[Idx(x, y, 0)] = (pDstU[Idx(x + 1, y)] - pDstU[Idx(x - 1, y)] + pDstV[Idx(x, y + 1)] - pDstV[Idx(x, y - 1)]) * fNorm;
+      const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+      const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
+      pScratch2[Idx(x, y, 0)] = (pDstU[Idx(xp, y)] - pDstU[Idx(xm, y)] + pDstV[Idx(x, yp)] - pDstV[Idx(x, ym)]) * fNorm;
     }
   }
-
-  ClearBounds(pScratch2);
 
   ezMemoryUtils::ZeroFill(pScratch1, m_uiNumCells);
 
@@ -233,15 +209,18 @@ void ezWindSimulation::Project2D(float* pDstU, float* pDstV, float* pScratch1, f
 
   for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
   {
+    const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+    const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
     for (ezUInt32 x = 1; x <= m_uiSizeX; ++x)
     {
-      pDstU[Idx(x, y)] -= fNorm2 * (pScratch1[Idx(x + 1, y)] - pScratch1[Idx(x - 1, y)]);
-      pDstV[Idx(x, y)] -= fNorm2 * (pScratch1[Idx(x, y + 1)] - pScratch1[Idx(x, y - 1)]);
+      const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+      const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
+      pDstU[Idx(x, y)] -= fNorm2 * (pScratch1[Idx(xp, y)] - pScratch1[Idx(xm, y)]);
+      pDstV[Idx(x, y)] -= fNorm2 * (pScratch1[Idx(x, yp)] - pScratch1[Idx(x, ym)]);
     }
   }
-
-  ClearBounds(pDstU);
-  ClearBounds(pDstV);
 }
 
 void ezWindSimulation::Project3D(float* pDstU, float* pDstV, float* pDstW, float* pScratch1, float* pScratch2)
@@ -250,17 +229,24 @@ void ezWindSimulation::Project3D(float* pDstU, float* pDstV, float* pDstW, float
 
   for (ezUInt32 z = 1; z <= m_uiSizeZ; ++z)
   {
+    const ezInt32 zm = ezMath::Max<ezInt32>(z - 1, ClampMinZ);
+    const ezInt32 zp = ezMath::Min<ezInt32>(z + 1, ClampMaxZ);
+
     for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
     {
+      const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+      const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
       for (ezUInt32 x = 1; x <= m_uiSizeX; ++x)
       {
-        pScratch2[Idx(x, y, z)] = fNorm * (pDstU[Idx(x + 1, y, z)] - pDstU[Idx(x - 1, y, z)] + pDstV[Idx(x, y + 1, z)] -
-                                            pDstV[Idx(x, y - 1, z)] + pDstV[Idx(x, y, z + 1)] - pDstV[Idx(x, y, z - 1)]);
+        const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+        const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
+        pScratch2[Idx(x, y, z)] = fNorm * (pDstU[Idx(xp, y, z)] - pDstU[Idx(xm, y, z)] + pDstV[Idx(x, yp, z)] - pDstV[Idx(x, ym, z)] +
+          pDstW[Idx(x, y, zp)] - pDstW[Idx(x, y, zm)]);
       }
     }
   }
-
-  ClearBounds(pScratch2);
 
   ezMemoryUtils::ZeroFill(pScratch1, m_uiNumCells);
 
@@ -270,29 +256,37 @@ void ezWindSimulation::Project3D(float* pDstU, float* pDstV, float* pDstW, float
 
   for (ezUInt32 z = 1; z <= m_uiSizeZ; ++z)
   {
+    const ezInt32 zm = ezMath::Max<ezInt32>(z - 1, ClampMinZ);
+    const ezInt32 zp = ezMath::Min<ezInt32>(z + 1, ClampMaxZ);
+
     for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
     {
+      const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+      const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
       for (ezUInt32 x = 1; x <= m_uiSizeX; ++x)
       {
-        pDstU[Idx(x, y, z)] -= fNorm2 * (pScratch1[Idx(x + 1, y, z)] - pScratch1[Idx(x - 1, y, z)]);
-        pDstV[Idx(x, y, z)] -= fNorm2 * (pScratch1[Idx(x, y + 1, z)] - pScratch1[Idx(x, y - 1, z)]);
-        pDstW[Idx(x, y, z)] -= fNorm2 * (pScratch1[Idx(x, y, z + 1)] - pScratch1[Idx(x, y, z - 1)]);
+        const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+        const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
+        pDstU[Idx(x, y, z)] -= fNorm2 * (pScratch1[Idx(xp, y, z)] - pScratch1[Idx(xm, y, z)]);
+        pDstV[Idx(x, y, z)] -= fNorm2 * (pScratch1[Idx(x, yp, z)] - pScratch1[Idx(x, ym, z)]);
+        pDstW[Idx(x, y, z)] -= fNorm2 * (pScratch1[Idx(x, y, zp)] - pScratch1[Idx(x, y, zm)]);
       }
     }
   }
-
-  ClearBounds(pDstU);
-  ClearBounds(pDstV);
-  ClearBounds(pDstW);
 }
 
 void ezWindSimulation::Advect(float* pDst, const float* pSrc)
 {
   const float dt0 = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
 
-  const float maxX = m_uiSizeX + 0.5f;
-  const float maxY = m_uiSizeY + 0.5f;
-  const float maxZ = m_uiSizeZ + 0.5f;
+  const float minX = 0.5f + ClampOffset;
+  const float minY = 0.5f + ClampOffset;
+  const float minZ = 0.5f + ClampOffset;
+  const float maxX = m_uiSizeX + 0.5f - ClampOffset;
+  const float maxY = m_uiSizeY + 0.5f - ClampOffset;
+  const float maxZ = m_uiSizeZ + 0.5f - ClampOffset;
 
   if (IsVolumetric())
   {
@@ -303,9 +297,9 @@ void ezWindSimulation::Advect(float* pDst, const float* pSrc)
         for (ezUInt32 i = 1; i <= m_uiSizeX; ++i)
         {
           // compute reverse velocity sample position
-          const float x = ezMath::Clamp(i - dt0 * m_pPrevVelocities[0][Idx(i, j, k)], 0.5f, maxX);
-          const float y = ezMath::Clamp(j - dt0 * m_pPrevVelocities[1][Idx(i, j, k)], 0.5f, maxY);
-          const float z = ezMath::Clamp(k - dt0 * m_pPrevVelocities[2][Idx(i, j, k)], 0.5f, maxZ);
+          const float x = ezMath::Clamp(i - dt0 * m_pPrevVelocities[0][Idx(i, j, k)], minX, maxX);
+          const float y = ezMath::Clamp(j - dt0 * m_pPrevVelocities[1][Idx(i, j, k)], minY, maxY);
+          const float z = ezMath::Clamp(k - dt0 * m_pPrevVelocities[2][Idx(i, j, k)], minZ, maxZ);
 
           // trilinear interpolate from the 8 sample position cells
           const ezUInt32 i0 = (ezUInt32)x;
@@ -337,8 +331,8 @@ void ezWindSimulation::Advect(float* pDst, const float* pSrc)
       for (ezUInt32 i = 1; i <= m_uiSizeX; ++i)
       {
         // compute reverse velocity sample position
-        const float x = ezMath::Clamp(i - dt0 * m_pPrevVelocities[0][Idx(i, j)], 0.5f, maxX);
-        const float y = ezMath::Clamp(j - dt0 * m_pPrevVelocities[1][Idx(i, j)], 0.5f, maxY);
+        const float x = ezMath::Clamp(i - dt0 * m_pPrevVelocities[0][Idx(i, j)], minX, maxX);
+        const float y = ezMath::Clamp(j - dt0 * m_pPrevVelocities[1][Idx(i, j)], minY, maxY);
 
         // bilinear interpolate from the 4 sample position cells
         const ezUInt32 i0 = (ezUInt32)x;
@@ -355,6 +349,4 @@ void ezWindSimulation::Advect(float* pDst, const float* pSrc)
       }
     }
   }
-
-  ClearBounds(pDst);
 }
