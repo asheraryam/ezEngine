@@ -14,6 +14,7 @@ public:
 
   virtual ezVec3 GetWindAt(const ezVec3& vPosition);
   virtual void SetFallbackWind(const ezVec3& vWind);
+  virtual ezVec3 GetFallbackWind() const;
 
 private:
   ezVec3 m_vFallbackWind;

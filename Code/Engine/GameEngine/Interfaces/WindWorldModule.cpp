@@ -27,7 +27,10 @@ void ezWindWorldModuleInterface::SetFallbackWind(const ezVec3& vWind)
   m_vFallbackWind = vWind;
 }
 
-
+ezVec3 ezWindWorldModuleInterface::GetFallbackWind() const
+{
+  return m_vFallbackWind;
+}
 
 EZ_STATICLINK_FILE(GameEngine, GameEngine_Interfaces_WindWorldModule);
 
