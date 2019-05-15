@@ -132,6 +132,13 @@ void ezWindVolumeComponent::Update()
     const float h = m_Wind.GetCellSize();
     const float h2 = h * 0.5f;
 
+    ezVec3 vOffset;
+    vOffset.x = (m_Wind.GetSizeX() * -0.5f) * m_Wind.GetCellSize();
+    vOffset.y = (m_Wind.GetSizeY() * -0.5f) * m_Wind.GetCellSize();
+    vOffset.z = (m_Wind.GetSizeZ() * -0.5f) * m_Wind.GetCellSize();
+
+    const ezTransform ownerTransform = GetOwner()->GetGlobalTransform();
+
     for (int k0 = 1; k0 <= m_Wind.GetSizeZ(); k0++)
     {
       const int k = m_Wind.IsVolumetric() ? k0 : 0;
@@ -147,6 +154,8 @@ void ezWindVolumeComponent::Update()
 
           auto& l = lines.ExpandAndGetRef();
           l.m_start.Set(x, y, z);
+          l.m_start += vOffset;
+          l.m_start = ownerTransform * l.m_start;
 
           if (w != nullptr)
           {
@@ -156,6 +165,9 @@ void ezWindVolumeComponent::Update()
           {
             l.m_end.Set(x + u[m_Wind.Idx(i, j)] * h2, y + v[m_Wind.Idx(i, j)] * h2, z);
           }
+
+          l.m_end += vOffset;
+          l.m_end = ownerTransform * l.m_end;
         }
       }
     }
