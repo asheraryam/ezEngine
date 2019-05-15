@@ -112,10 +112,10 @@ void ezParticleBehavior_Velocity::Process(ezUInt64 uiNumElements)
   const ezVec3 vRise = vDown * tDiff * -m_fRiseSpeed;
 
   ezVec3 vWind(0);
-  if (m_pWindModule != nullptr)
-  {
-    vWind = m_pWindModule->GetWindAt(GetOwnerSystem()->GetTransform().m_vPosition) * m_fWindInfluence * tDiff;
-  }
+  //if (m_pWindModule != nullptr)
+  //{
+  //  vWind = m_pWindModule->GetWindAt(GetOwnerSystem()->GetTransform().m_vPosition) * m_fWindInfluence * tDiff;
+  //}
 
   const ezVec3 vAddPos0 = vRise + vWind;
 
@@ -130,6 +130,18 @@ void ezParticleBehavior_Velocity::Process(ezUInt64 uiNumElements)
 
   while (!itPosition.HasReachedEnd())
   {
+    if (m_pWindModule != nullptr)
+    {
+      // TODO: move this into dedicated 'per particle wind' behavior
+
+      vWind = m_pWindModule->GetWindAt(ezSimdConversion::ToVec3(itPosition.Current())) * m_fWindInfluence * tDiff;
+
+      ezSimdVec4f vSimdWind;
+      vSimdWind.Load<3>(&vWind.x);
+
+      itPosition.Current() += vSimdWind;
+    }
+
     itPosition.Current() += vAddPos;
     itVelocity.Current() *= fFrictionFactor;
 
