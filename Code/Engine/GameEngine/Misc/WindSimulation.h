@@ -16,6 +16,7 @@ public:
   void Step(ezTime tDelta);
 
   float GetCellSize() const { return m_fCellSize; }
+  float GetInverseCellSize() const { return m_fInverseCellSize; }
 
   ezUInt16 GetSizeX() const { return m_uiSizeX; }
   ezUInt16 GetSizeY() const { return m_uiSizeY; }
@@ -27,6 +28,9 @@ public:
   float* GetVelocitiesX() const { return m_pVelocities[0]; }
   float* GetVelocitiesY() const { return m_pVelocities[1]; }
   float* GetVelocitiesZ() const { return m_pVelocities[2]; }
+
+  ezVec3 MapPositionToCellIdx(const ezVec3& vPosition) const;
+  ezVec2 MapPositionToCellIdx(const ezVec2& vPosition) const;
 
   ezVec2 SampleVelocity2D(const ezVec2& vCellIdx) const;
   ezVec3 SampleVelocity3D(const ezVec3& vCellIdx) const;
@@ -40,6 +44,7 @@ private:
 
   ezTime m_UpdateStep;
   float m_fCellSize = 1.0f;
+  float m_fInverseCellSize = 1.0f;
 
   ezUInt16 m_uiSizeX = 0;
   ezUInt16 m_uiSizeY = 0;

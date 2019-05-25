@@ -8,12 +8,23 @@
 
 typedef ezComponentManagerSimple<class ezWindVolumeComponent, ezComponentUpdateType::WhenSimulating> ezWindVolumeComponentManager;
 
+class ezFluidWindVolume : public ezWindVolume
+{
+public:
+  virtual ezResult GetWindAt(const ezVec3& vGlobalPosition, ezVec3& out_vWind) override;
+
+  ezVec3 m_vPosition;
+  ezQuat m_qRotation;
+  ezWindSimulation m_Simulation;
+};
+
 class EZ_GAMEENGINE_DLL ezWindVolumeComponent : public ezComponent
 {
   EZ_DECLARE_COMPONENT_TYPE(ezWindVolumeComponent, ezComponent, ezWindVolumeComponentManager);
 
 public:
   ezWindVolumeComponent();
+  ~ezWindVolumeComponent();
 
   void Update();
 
@@ -22,12 +33,21 @@ public:
 
   // ************************************* PROPERTIES ***********************************
 
+  ezUInt8 m_uiCellsX = 32;
+  ezUInt8 m_uiCellsY = 32;
+  ezUInt8 m_uiCellsZ = 4;
+
+  float m_fCellSize = 0.5f;
+  bool m_bVisualize = false;
+
 protected:
    
-  virtual void OnSimulationStarted() override;
+  virtual void OnActivated() override;
+  virtual void OnDeactivated() override;
 
   void addStream(int x, int y, float force);
   void addDrop(int x, int y, float force);
 
-  ezWindSimulation m_Wind;
+  ezWindWorldModuleInterface* m_pWindModule = nullptr;
+  ezFluidWindVolume m_FluidVolume;
 };

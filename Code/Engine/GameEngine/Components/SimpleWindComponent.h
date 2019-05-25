@@ -32,7 +32,7 @@ public:
   ezAngle m_Deviation;
 
 protected:
-  virtual void Initialize() override;
+  virtual void OnSimulationStarted() override;
   virtual void OnActivated() override;
   virtual void OnDeactivated() override;
 

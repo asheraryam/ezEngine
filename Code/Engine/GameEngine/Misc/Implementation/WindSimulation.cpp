@@ -37,6 +37,7 @@ ezWindSimulation::~ezWindSimulation() = default;
 void ezWindSimulation::Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ /*= 1*/)
 {
   m_fCellSize = fCellSize;
+  m_fInverseCellSize = 1.0f / fCellSize;
   m_UpdateStep = ezTime::Milliseconds(100);
 
   m_uiSizeX = uiSizeX;
@@ -350,6 +351,25 @@ void ezWindSimulation::Advect(float* pDst, const float* pSrc)
       }
     }
   }
+}
+
+ezVec3 ezWindSimulation::MapPositionToCellIdx(const ezVec3& vPosition) const
+{
+  ezVec3 vCellIdx = vPosition * m_fInverseCellSize;
+  vCellIdx.x += m_uiSizeX * 0.5f;
+  vCellIdx.y += m_uiSizeY * 0.5f;
+  vCellIdx.z += m_uiSizeZ * 0.5f;
+
+  return vCellIdx;
+}
+
+ezVec2 ezWindSimulation::MapPositionToCellIdx(const ezVec2& vPosition) const
+{
+  ezVec2 vCellIdx = vPosition * m_fInverseCellSize;
+  vCellIdx.x += m_uiSizeX * 0.5f;
+  vCellIdx.y += m_uiSizeY * 0.5f;
+
+  return vCellIdx;
 }
 
 ezVec2 ezWindSimulation::SampleVelocity2D(const ezVec2& vCellIdx) const

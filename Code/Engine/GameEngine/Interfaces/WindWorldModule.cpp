@@ -19,6 +19,13 @@ ezWindWorldModuleInterface::ezWindWorldModuleInterface(ezWorld* pWorld)
 
 ezVec3 ezWindWorldModuleInterface::GetWindAt(const ezVec3& vPosition)
 {
+  for (auto pVolume : m_WindVolumes)
+  {
+    ezVec3 result;
+    if (pVolume->GetWindAt(vPosition, result).Succeeded())
+      return result;
+  }
+
   return m_vFallbackWind;
 }
 
@@ -30,6 +37,18 @@ void ezWindWorldModuleInterface::SetFallbackWind(const ezVec3& vWind)
 ezVec3 ezWindWorldModuleInterface::GetFallbackWind() const
 {
   return m_vFallbackWind;
+}
+
+void ezWindWorldModuleInterface::AddWindVolume(ezWindVolume* pVolume)
+{
+  EZ_ASSERT_DEV(!m_WindVolumes.Contains(pVolume), "Cannot add the same wind volume twice");
+
+  m_WindVolumes.PushBack(pVolume);
+}
+
+void ezWindWorldModuleInterface::RemoveWindVolume(ezWindVolume* pVolume)
+{
+  m_WindVolumes.RemoveAndSwap(pVolume);
 }
 
 EZ_STATICLINK_FILE(GameEngine, GameEngine_Interfaces_WindWorldModule);

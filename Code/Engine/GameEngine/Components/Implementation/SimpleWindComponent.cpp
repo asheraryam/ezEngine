@@ -134,9 +134,9 @@ void ezSimpleWindComponent::ComputeNextState()
   m_vNextDirection.NormalizeIfNotZero(ezVec3::ZeroVector());
 }
 
-void ezSimpleWindComponent::Initialize()
+void ezSimpleWindComponent::OnSimulationStarted()
 {
-  SUPER::Initialize();
+  SUPER::OnSimulationStarted();
 
   // make sure to query the wind interface before any simulation starts
   ezWindWorldModuleInterface* pWindInterface = GetWorld()->GetOrCreateModule<ezWindWorldModuleInterface>();
