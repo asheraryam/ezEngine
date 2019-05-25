@@ -1,38 +1,302 @@
 #include <GameEnginePCH.h>
 
+#include <Foundation/Math/Vec3.h>
 #include <Foundation/Profiling/Profiling.h>
 #include <GameEngine/Misc/WindSimulation.h>
-#include <Foundation/Math/Vec3.h>
-
-ezWindSimulation::ezWindSimulation() = default;
-ezWindSimulation::~ezWindSimulation() = default;
 
 #if 1
 
 // uses the empty boundary to affect the simulation
 
-#define ClampMinX 0
-#define ClampMaxX (m_uiSizeX+1)
-#define ClampMinY 0
-#define ClampMaxY (m_uiSizeY+1)
-#define ClampMinZ 0
-#define ClampMaxZ (m_uiSizeZ+1)
-#define ClampOffset 0.0f
+#  define ClampMinX 0
+#  define ClampMaxX (uiSizeX + 1)
+#  define ClampMinY 0
+#  define ClampMaxY (uiSizeY + 1)
+#  define ClampMinZ 0
+#  define ClampMaxZ (uiSizeZ + 1)
+#  define ClampOffset 0.0f
 
 #else
 
 // clamps sampling points to the inner values (no boundary)
 
-#define ClampMinX 1
-#define ClampMaxX (m_uiSizeX)
-#define ClampMinY 1
-#define ClampMaxY (m_uiSizeY)
-#define ClampMinZ 1
-#define ClampMaxZ (m_uiSizeZ)
-#define ClampOffset 1.0f
+#  define ClampMinX 1
+#  define ClampMaxX (uiSizeX)
+#  define ClampMinY 1
+#  define ClampMaxY (uiSizeY)
+#  define ClampMinZ 1
+#  define ClampMaxZ (uiSizeZ)
+#  define ClampOffset 1.0f
 
 #endif
 
+#define PrepareIdx2D const ezUInt32 uiIdxOffsetY = uiSizeX + 2;
+#define PrepareIdx3D PrepareIdx2D const ezUInt32 uiIdxOffsetZ = (uiSizeY + 2) * (uiSizeX + 2);
+
+#define Idx2D(x, y) (uiIdxOffsetY * y + x)
+#define Idx3D(x, y, z) (uiIdxOffsetZ * z + uiIdxOffsetY * y + x)
+
+namespace
+{
+  void CopyPreviousVelocity(float* pDst, const float* pSrc, ezUInt32 uiNumCells, float fDampenFactor)
+  {
+    for (ezUInt32 i = 0; i < uiNumCells; ++i)
+    {
+      pDst[i] = pSrc[i] * fDampenFactor;
+    }
+  }
+
+  void LinearSolve2D(float* pDst, const float* pPrev, const ezUInt16 uiSizeX, const ezUInt16 uiSizeY)
+  {
+    const ezUInt32 uiNumIterations = 20;
+    const float fNorm = 1.0f / 4.0f;
+
+    PrepareIdx2D;
+
+    for (ezUInt32 k = 0; k < uiNumIterations; k++)
+    {
+      for (ezUInt32 y = 1; y <= uiSizeY; ++y)
+      {
+        const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+        const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
+        for (ezUInt32 x = 1; x <= uiSizeX; ++x)
+        {
+          const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+          const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
+          pDst[Idx2D(x, y)] =
+            (pPrev[Idx2D(x, y)] + (pDst[Idx2D(xm, y)] + pDst[Idx2D(xp, y)] + pDst[Idx2D(x, ym)] + pDst[Idx2D(x, yp)])) * fNorm;
+        }
+      }
+    }
+  }
+
+  void LinearSolve3D(float* pDst, const float* pPrev, const ezUInt16 uiSizeX, const ezUInt16 uiSizeY, const ezUInt16 uiSizeZ)
+  {
+    const ezUInt32 uiNumIterations = 20;
+    const float fNorm = 1.0f / 6.0f;
+
+    PrepareIdx3D;
+
+    for (ezUInt32 k = 0; k < uiNumIterations; k++)
+    {
+      for (ezInt32 z = 1; z <= uiSizeZ; ++z)
+      {
+        const ezInt32 zm = ezMath::Max<ezInt32>(z - 1, ClampMinZ);
+        const ezInt32 zp = ezMath::Min<ezInt32>(z + 1, ClampMaxZ);
+
+        for (ezInt32 y = 1; y <= uiSizeY; ++y)
+        {
+          const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+          const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
+          for (ezInt32 x = 1; x <= uiSizeX; ++x)
+          {
+            const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+            const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
+            pDst[Idx3D(x, y, z)] = (pPrev[Idx3D(x, y, z)] + (pDst[Idx3D(xm, y, z)] + pDst[Idx3D(xp, y, z)] + pDst[Idx3D(x, ym, z)] +
+                                                              pDst[Idx3D(x, yp, z)] + pDst[Idx3D(x, y, zm)] + pDst[Idx3D(x, y, zp)])) *
+                                   fNorm;
+          }
+        }
+      }
+    }
+  }
+
+  void Project2D(float* pDstU, float* pDstV, float* pScratch1, float* pScratch2, const ezUInt16 uiSizeX, const ezUInt16 uiSizeY)
+  {
+    const float fNorm = -0.5f;
+    const ezUInt32 uiNumCells = (uiSizeX + 2) * (uiSizeY + 2);
+
+    PrepareIdx2D;
+
+    for (ezUInt32 y = 1; y <= uiSizeY; ++y)
+    {
+      const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+      const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
+      for (ezUInt32 x = 1; x <= uiSizeX; ++x)
+      {
+        const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+        const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
+        pScratch2[Idx2D(x, y)] = (pDstU[Idx2D(xp, y)] - pDstU[Idx2D(xm, y)] + pDstV[Idx2D(x, yp)] - pDstV[Idx2D(x, ym)]) * fNorm;
+      }
+    }
+
+    ezMemoryUtils::ZeroFill(pScratch1, uiNumCells);
+
+    LinearSolve2D(pScratch1, pScratch2, uiSizeX, uiSizeY);
+
+    const float fNorm2 = 0.5f;
+
+    for (ezUInt32 y = 1; y <= uiSizeY; ++y)
+    {
+      const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+      const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
+      for (ezUInt32 x = 1; x <= uiSizeX; ++x)
+      {
+        const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+        const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
+        pDstU[Idx2D(x, y)] -= fNorm2 * (pScratch1[Idx2D(xp, y)] - pScratch1[Idx2D(xm, y)]);
+        pDstV[Idx2D(x, y)] -= fNorm2 * (pScratch1[Idx2D(x, yp)] - pScratch1[Idx2D(x, ym)]);
+      }
+    }
+  }
+
+  void Project3D(float* pDstU, float* pDstV, float* pDstW, float* pScratch1, float* pScratch2, const ezUInt16 uiSizeX,
+    const ezUInt16 uiSizeY, const ezUInt16 uiSizeZ)
+  {
+    const float fNorm = -0.33f;
+    const ezUInt32 uiNumCells = (uiSizeX + 2) * (uiSizeY + 2) * (uiSizeZ + 2);
+
+    PrepareIdx3D;
+
+    for (ezUInt32 z = 1; z <= uiSizeZ; ++z)
+    {
+      const ezInt32 zm = ezMath::Max<ezInt32>(z - 1, ClampMinZ);
+      const ezInt32 zp = ezMath::Min<ezInt32>(z + 1, ClampMaxZ);
+
+      for (ezUInt32 y = 1; y <= uiSizeY; ++y)
+      {
+        const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+        const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
+        for (ezUInt32 x = 1; x <= uiSizeX; ++x)
+        {
+          const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+          const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
+          pScratch2[Idx3D(x, y, z)] = fNorm * (pDstU[Idx3D(xp, y, z)] - pDstU[Idx3D(xm, y, z)] + pDstV[Idx3D(x, yp, z)] -
+                                                pDstV[Idx3D(x, ym, z)] + pDstW[Idx3D(x, y, zp)] - pDstW[Idx3D(x, y, zm)]);
+        }
+      }
+    }
+
+    ezMemoryUtils::ZeroFill(pScratch1, uiNumCells);
+
+    LinearSolve3D(pScratch1, pScratch2, uiSizeX, uiSizeY, uiSizeZ);
+
+    const float fNorm2 = 0.33f;
+
+    for (ezUInt32 z = 1; z <= uiSizeZ; ++z)
+    {
+      const ezInt32 zm = ezMath::Max<ezInt32>(z - 1, ClampMinZ);
+      const ezInt32 zp = ezMath::Min<ezInt32>(z + 1, ClampMaxZ);
+
+      for (ezUInt32 y = 1; y <= uiSizeY; ++y)
+      {
+        const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
+        const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
+
+        for (ezUInt32 x = 1; x <= uiSizeX; ++x)
+        {
+          const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
+          const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
+
+          pDstU[Idx3D(x, y, z)] -= fNorm2 * (pScratch1[Idx3D(xp, y, z)] - pScratch1[Idx3D(xm, y, z)]);
+          pDstV[Idx3D(x, y, z)] -= fNorm2 * (pScratch1[Idx3D(x, yp, z)] - pScratch1[Idx3D(x, ym, z)]);
+          pDstW[Idx3D(x, y, z)] -= fNorm2 * (pScratch1[Idx3D(x, y, zp)] - pScratch1[Idx3D(x, y, zm)]);
+        }
+      }
+    }
+  }
+
+  void Advect2D(
+    float* pDst, const float* pSrc, const float* pSrcX, const float* pSrcY, const ezUInt16 uiSizeX, const ezUInt16 uiSizeY, const float dt0)
+  {
+    // const float dt0 = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
+
+    const float minX = 0.5f + ClampOffset;
+    const float minY = 0.5f + ClampOffset;
+    const float maxX = uiSizeX + 0.5f - ClampOffset;
+    const float maxY = uiSizeY + 0.5f - ClampOffset;
+
+    PrepareIdx2D;
+
+    for (ezUInt32 j = 1; j <= uiSizeY; ++j)
+    {
+      for (ezUInt32 i = 1; i <= uiSizeX; ++i)
+      {
+        // compute reverse velocity sample position
+        const float x = ezMath::Clamp(i - dt0 * pSrcX[Idx2D(i, j)], minX, maxX);
+        const float y = ezMath::Clamp(j - dt0 * pSrcY[Idx2D(i, j)], minY, maxY);
+
+        // bilinear interpolate from the 4 sample position cells
+        const ezUInt32 i0 = (ezUInt32)x;
+        const ezUInt32 i1 = i0 + 1;
+        const ezUInt32 j0 = (ezUInt32)y;
+        const ezUInt32 j1 = j0 + 1;
+
+        const float s1 = x - i0;
+        const float s0 = 1 - s1;
+        const float t1 = y - j0;
+        const float t0 = 1 - t1;
+
+        pDst[Idx2D(i, j)] =
+          s0 * (t0 * pSrc[Idx2D(i0, j0)] + t1 * pSrc[Idx2D(i0, j1)]) + s1 * (t0 * pSrc[Idx2D(i1, j0)] + t1 * pSrc[Idx2D(i1, j1)]);
+      }
+    }
+  }
+
+  void Advect3D(float* pDst, const float* pSrc, const float* pSrcX, const float* pSrcY, const float* pSrcZ, const ezUInt16 uiSizeX,
+    const ezUInt16 uiSizeY, const ezUInt16 uiSizeZ, const float dt0)
+  {
+    // const float dt0 = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
+
+    const float minX = 0.5f + ClampOffset;
+    const float minY = 0.5f + ClampOffset;
+    const float minZ = 0.5f + ClampOffset;
+    const float maxX = uiSizeX + 0.5f - ClampOffset;
+    const float maxY = uiSizeY + 0.5f - ClampOffset;
+    const float maxZ = uiSizeZ + 0.5f - ClampOffset;
+
+    PrepareIdx3D;
+
+    for (ezUInt32 k = 1; k <= uiSizeZ; ++k)
+    {
+      for (ezUInt32 j = 1; j <= uiSizeY; ++j)
+      {
+        for (ezUInt32 i = 1; i <= uiSizeX; ++i)
+        {
+          // compute reverse velocity sample position
+          const float x = ezMath::Clamp(i - dt0 * pSrcX[Idx3D(i, j, k)], minX, maxX);
+          const float y = ezMath::Clamp(j - dt0 * pSrcY[Idx3D(i, j, k)], minY, maxY);
+          const float z = ezMath::Clamp(k - dt0 * pSrcZ[Idx3D(i, j, k)], minZ, maxZ);
+
+          // trilinear interpolate from the 8 sample position cells
+          const ezUInt32 i0 = (ezUInt32)x;
+          const ezUInt32 i1 = i0 + 1;
+          const ezUInt32 j0 = (ezUInt32)y;
+          const ezUInt32 j1 = j0 + 1;
+          const ezUInt32 k0 = (ezUInt32)z;
+          const ezUInt32 k1 = k0 + 1;
+
+          const float s1 = x - i0;
+          const float s0 = 1 - s1;
+          const float t1 = y - j0;
+          const float t0 = 1 - t1;
+          const float r1 = z - k0;
+          const float r0 = 1 - r1;
+
+          pDst[Idx3D(i, j, k)] = r0 * (s0 * (t0 * pSrc[Idx3D(i0, j0, k0)] + t1 * pSrc[Idx3D(i0, j1, k0)]) +
+                                        s1 * (t0 * pSrc[Idx3D(i1, j0, k0)] + t1 * pSrc[Idx3D(i1, j1, k0)])) +
+                                 r1 * (s0 * (t0 * pSrc[Idx3D(i0, j0, k1)] + t1 * pSrc[Idx3D(i0, j1, k1)]) +
+                                        s1 * (t0 * pSrc[Idx3D(i1, j0, k1)] + t1 * pSrc[Idx3D(i1, j1, k1)]));
+        }
+      }
+    }
+  }
+} // namespace
+
+//////////////////////////////////////////////////////////////////////////
+
+ezWindSimulation::ezWindSimulation() = default;
+ezWindSimulation::~ezWindSimulation() = default;
 
 void ezWindSimulation::Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ /*= 1*/)
 {
@@ -93,263 +357,31 @@ void ezWindSimulation::Step(ezTime tDelta)
   EZ_PROFILE_SCOPE("Wind Simulation");
 
   // TODO: use tDelta to advance internal interpolation factor
-
-  CopyPreviousVelocity(m_pPrevVelocities[0], m_pVelocities[0]);
-  CopyPreviousVelocity(m_pPrevVelocities[1], m_pVelocities[1]);
-
-  if (IsVolumetric())
-  {
-    CopyPreviousVelocity(m_pPrevVelocities[2], m_pVelocities[2]);
-    Project3D(m_pPrevVelocities[0], m_pPrevVelocities[1], m_pPrevVelocities[2], m_pVelocities[0], m_pVelocities[1]);
-  }
-  else
-  {
-    Project2D(m_pPrevVelocities[0], m_pPrevVelocities[1], m_pVelocities[0], m_pVelocities[1]);
-  }
-
-  Advect(m_pVelocities[0], m_pPrevVelocities[0]);
-  Advect(m_pVelocities[1], m_pPrevVelocities[1]);
-
-  if (IsVolumetric())
-  {
-    Advect(m_pVelocities[2], m_pPrevVelocities[2]);
-    Project3D(m_pVelocities[0], m_pVelocities[1], m_pVelocities[2], m_pPrevVelocities[0], m_pPrevVelocities[1]);
-  }
-  else
-  {
-    Project2D(m_pVelocities[0], m_pVelocities[1], m_pPrevVelocities[0], m_pPrevVelocities[1]);
-  }
-}
-
-void ezWindSimulation::CopyPreviousVelocity(float* pDst, const float* pSrc)
-{
-  const float fDampening = 0.995f;
-  //const float fDampening = 1.0f;
-
-  for (ezUInt32 i = 0; i < m_uiNumCells; ++i)
-  {
-    pDst[i] = pSrc[i] * fDampening;
-  }
-}
-
-void ezWindSimulation::LinearSolve(float* pDst, const float* pPrev)
-{
-  const ezUInt32 uiNumIterations = 20;
-
-  if (IsVolumetric())
-  {
-    for (ezUInt32 k = 0; k < uiNumIterations; k++)
-    {
-      for (ezInt32 z = 1; z <= m_uiSizeZ; ++z)
-      {
-        const ezInt32 zm = ezMath::Max<ezInt32>(z - 1, ClampMinZ);
-        const ezInt32 zp = ezMath::Min<ezInt32>(z + 1, ClampMaxZ);
-
-        for (ezInt32 y = 1; y <= m_uiSizeY; ++y)
-        {
-          const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
-          const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
-
-          for (ezInt32 x = 1; x <= m_uiSizeX; ++x)
-          {
-            const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
-            const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
-
-            pDst[Idx(x, y, z)] = (pPrev[Idx(x, y, z)] + (pDst[Idx(xm, y, z)] + pDst[Idx(xp, y, z)] + pDst[Idx(x, ym, z)] +
-                                                          pDst[Idx(x, yp, z)] + pDst[Idx(x, y, zm)] + pDst[Idx(x, y, zp)])) /
-                                 6.0f;
-          }
-        }
-      }
-    }
-  }
-  else
-  {
-    for (ezUInt32 k = 0; k < uiNumIterations; k++)
-    {
-      for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
-      {
-        const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
-        const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
-
-        for (ezUInt32 x = 1; x <= m_uiSizeX; ++x)
-        {
-          const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
-          const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
-
-          pDst[Idx(x, y, 0)] =
-            (pPrev[Idx(x, y, 0)] + (pDst[Idx(xm, y, 0)] + pDst[Idx(xp, y, 0)] + pDst[Idx(x, ym, 0)] + pDst[Idx(x, yp, 0)])) * 0.25f;
-        }
-      }
-    }
-  }
-}
-
-void ezWindSimulation::Project2D(float* pDstU, float* pDstV, float* pScratch1, float* pScratch2)
-{
-  const float fNorm = -0.5f;
-
-  for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
-  {
-    const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
-    const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
-
-    for (ezUInt32 x = 1; x <= m_uiSizeX; ++x)
-    {
-      const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
-      const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
-
-      pScratch2[Idx(x, y, 0)] = (pDstU[Idx(xp, y)] - pDstU[Idx(xm, y)] + pDstV[Idx(x, yp)] - pDstV[Idx(x, ym)]) * fNorm;
-    }
-  }
-
-  ezMemoryUtils::ZeroFill(pScratch1, m_uiNumCells);
-
-  LinearSolve(pScratch1, pScratch2);
-
-  const float fNorm2 = 0.5f;
-
-  for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
-  {
-    const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
-    const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
-
-    for (ezUInt32 x = 1; x <= m_uiSizeX; ++x)
-    {
-      const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
-      const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
-
-      pDstU[Idx(x, y)] -= fNorm2 * (pScratch1[Idx(xp, y)] - pScratch1[Idx(xm, y)]);
-      pDstV[Idx(x, y)] -= fNorm2 * (pScratch1[Idx(x, yp)] - pScratch1[Idx(x, ym)]);
-    }
-  }
-}
-
-void ezWindSimulation::Project3D(float* pDstU, float* pDstV, float* pDstW, float* pScratch1, float* pScratch2)
-{
-  const float fNorm = -0.33f;
-
-  for (ezUInt32 z = 1; z <= m_uiSizeZ; ++z)
-  {
-    const ezInt32 zm = ezMath::Max<ezInt32>(z - 1, ClampMinZ);
-    const ezInt32 zp = ezMath::Min<ezInt32>(z + 1, ClampMaxZ);
-
-    for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
-    {
-      const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
-      const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
-
-      for (ezUInt32 x = 1; x <= m_uiSizeX; ++x)
-      {
-        const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
-        const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
-
-        pScratch2[Idx(x, y, z)] = fNorm * (pDstU[Idx(xp, y, z)] - pDstU[Idx(xm, y, z)] + pDstV[Idx(x, yp, z)] - pDstV[Idx(x, ym, z)] +
-          pDstW[Idx(x, y, zp)] - pDstW[Idx(x, y, zm)]);
-      }
-    }
-  }
-
-  ezMemoryUtils::ZeroFill(pScratch1, m_uiNumCells);
-
-  LinearSolve(pScratch1, pScratch2);
-
-  const float fNorm2 = 0.33f;
-
-  for (ezUInt32 z = 1; z <= m_uiSizeZ; ++z)
-  {
-    const ezInt32 zm = ezMath::Max<ezInt32>(z - 1, ClampMinZ);
-    const ezInt32 zp = ezMath::Min<ezInt32>(z + 1, ClampMaxZ);
-
-    for (ezUInt32 y = 1; y <= m_uiSizeY; ++y)
-    {
-      const ezInt32 ym = ezMath::Max<ezInt32>(y - 1, ClampMinY);
-      const ezInt32 yp = ezMath::Min<ezInt32>(y + 1, ClampMaxY);
-
-      for (ezUInt32 x = 1; x <= m_uiSizeX; ++x)
-      {
-        const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
-        const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
-
-        pDstU[Idx(x, y, z)] -= fNorm2 * (pScratch1[Idx(xp, y, z)] - pScratch1[Idx(xm, y, z)]);
-        pDstV[Idx(x, y, z)] -= fNorm2 * (pScratch1[Idx(x, yp, z)] - pScratch1[Idx(x, ym, z)]);
-        pDstW[Idx(x, y, z)] -= fNorm2 * (pScratch1[Idx(x, y, zp)] - pScratch1[Idx(x, y, zm)]);
-      }
-    }
-  }
-}
-
-void ezWindSimulation::Advect(float* pDst, const float* pSrc)
-{
   const float dt0 = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
 
-  const float minX = 0.5f + ClampOffset;
-  const float minY = 0.5f + ClampOffset;
-  const float minZ = 0.5f + ClampOffset;
-  const float maxX = m_uiSizeX + 0.5f - ClampOffset;
-  const float maxY = m_uiSizeY + 0.5f - ClampOffset;
-  const float maxZ = m_uiSizeZ + 0.5f - ClampOffset;
+  CopyPreviousVelocity(m_pPrevVelocities[0], m_pVelocities[0], m_uiNumCells, m_fDampenFactor);
+  CopyPreviousVelocity(m_pPrevVelocities[1], m_pVelocities[1], m_uiNumCells, m_fDampenFactor);
 
   if (IsVolumetric())
   {
-    for (ezUInt32 k = 1; k <= m_uiSizeZ; ++k)
-    {
-      for (ezUInt32 j = 1; j <= m_uiSizeY; ++j)
-      {
-        for (ezUInt32 i = 1; i <= m_uiSizeX; ++i)
-        {
-          // compute reverse velocity sample position
-          const float x = ezMath::Clamp(i - dt0 * m_pPrevVelocities[0][Idx(i, j, k)], minX, maxX);
-          const float y = ezMath::Clamp(j - dt0 * m_pPrevVelocities[1][Idx(i, j, k)], minY, maxY);
-          const float z = ezMath::Clamp(k - dt0 * m_pPrevVelocities[2][Idx(i, j, k)], minZ, maxZ);
-
-          // trilinear interpolate from the 8 sample position cells
-          const ezUInt32 i0 = (ezUInt32)x;
-          const ezUInt32 i1 = i0 + 1;
-          const ezUInt32 j0 = (ezUInt32)y;
-          const ezUInt32 j1 = j0 + 1;
-          const ezUInt32 k0 = (ezUInt32)z;
-          const ezUInt32 k1 = k0 + 1;
-
-          const float s1 = x - i0;
-          const float s0 = 1 - s1;
-          const float t1 = y - j0;
-          const float t0 = 1 - t1;
-          const float r1 = z - k0;
-          const float r0 = 1 - r1;
-
-          pDst[Idx(i, j, k)] = r0 * (s0 * (t0 * pSrc[Idx(i0, j0, k0)] + t1 * pSrc[Idx(i0, j1, k0)]) +
-                                      s1 * (t0 * pSrc[Idx(i1, j0, k0)] + t1 * pSrc[Idx(i1, j1, k0)])) +
-                               r1 * (s0 * (t0 * pSrc[Idx(i0, j0, k1)] + t1 * pSrc[Idx(i0, j1, k1)]) +
-                                      s1 * (t0 * pSrc[Idx(i1, j0, k1)] + t1 * pSrc[Idx(i1, j1, k1)]));
-        }
-      }
-    }
+    CopyPreviousVelocity(m_pPrevVelocities[2], m_pVelocities[2], m_uiNumCells, m_fDampenFactor);
+    Project3D(m_pPrevVelocities[0], m_pPrevVelocities[1], m_pPrevVelocities[2], m_pVelocities[0], m_pVelocities[1], m_uiSizeX, m_uiSizeY,
+      m_uiSizeZ);
+    Advect3D(m_pVelocities[0], m_pPrevVelocities[0], m_pPrevVelocities[0], m_pPrevVelocities[1], m_pPrevVelocities[2], m_uiSizeX, m_uiSizeY,
+      m_uiSizeZ, dt0);
+    Advect3D(m_pVelocities[1], m_pPrevVelocities[1], m_pPrevVelocities[0], m_pPrevVelocities[1], m_pPrevVelocities[2], m_uiSizeX, m_uiSizeY,
+      m_uiSizeZ, dt0);
+    Advect3D(m_pVelocities[2], m_pPrevVelocities[2], m_pPrevVelocities[0], m_pPrevVelocities[1], m_pPrevVelocities[2], m_uiSizeX, m_uiSizeY,
+      m_uiSizeZ, dt0);
+    Project3D(
+      m_pVelocities[0], m_pVelocities[1], m_pVelocities[2], m_pPrevVelocities[0], m_pPrevVelocities[1], m_uiSizeX, m_uiSizeY, m_uiSizeZ);
   }
   else
   {
-    for (ezUInt32 j = 1; j <= m_uiSizeY; ++j)
-    {
-      for (ezUInt32 i = 1; i <= m_uiSizeX; ++i)
-      {
-        // compute reverse velocity sample position
-        const float x = ezMath::Clamp(i - dt0 * m_pPrevVelocities[0][Idx(i, j)], minX, maxX);
-        const float y = ezMath::Clamp(j - dt0 * m_pPrevVelocities[1][Idx(i, j)], minY, maxY);
-
-        // bilinear interpolate from the 4 sample position cells
-        const ezUInt32 i0 = (ezUInt32)x;
-        const ezUInt32 i1 = i0 + 1;
-        const ezUInt32 j0 = (ezUInt32)y;
-        const ezUInt32 j1 = j0 + 1;
-
-        const float s1 = x - i0;
-        const float s0 = 1 - s1;
-        const float t1 = y - j0;
-        const float t0 = 1 - t1;
-
-        pDst[Idx(i, j)] = s0 * (t0 * pSrc[Idx(i0, j0)] + t1 * pSrc[Idx(i0, j1)]) + s1 * (t0 * pSrc[Idx(i1, j0)] + t1 * pSrc[Idx(i1, j1)]);
-      }
-    }
+    Project2D(m_pPrevVelocities[0], m_pPrevVelocities[1], m_pVelocities[0], m_pVelocities[1], m_uiSizeX, m_uiSizeY);
+    Advect2D(m_pVelocities[0], m_pPrevVelocities[0], m_pPrevVelocities[0], m_pPrevVelocities[1], m_uiSizeX, m_uiSizeY, dt0);
+    Advect2D(m_pVelocities[1], m_pPrevVelocities[1], m_pPrevVelocities[0], m_pPrevVelocities[1], m_uiSizeX, m_uiSizeY, dt0);
+    Project2D(m_pVelocities[0], m_pVelocities[1], m_pPrevVelocities[0], m_pPrevVelocities[1], m_uiSizeX, m_uiSizeY);
   }
 }
 
@@ -450,8 +482,7 @@ ezVec3 ezWindSimulation::SampleVelocity3D(const ezVec3& vCellIdx) const
   const ezUInt32 i1j1k0 = Idx(i1, j1, k0);
   const ezUInt32 i1j1k1 = Idx(i1, j1, k1);
 
-  auto sampleComponent = [=](const float* pSrc) -> float
-  {
+  auto sampleComponent = [=](const float* pSrc) -> float {
     return r0 * (s0 * (t0 * pSrc[i0j0k0] + t1 * pSrc[i0j1k0]) + s1 * (t0 * pSrc[i1j0k0] + t1 * pSrc[i1j1k0])) +
            r1 * (s0 * (t0 * pSrc[i0j0k1] + t1 * pSrc[i0j1k1]) + s1 * (t0 * pSrc[i1j0k1] + t1 * pSrc[i1j1k1]));
   };
@@ -461,5 +492,5 @@ ezVec3 ezWindSimulation::SampleVelocity3D(const ezVec3& vCellIdx) const
   res.y = sampleComponent(m_pVelocities[1]);
   res.z = sampleComponent(m_pVelocities[2]);
 
-  return res;  
+  return res;
 }

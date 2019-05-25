@@ -36,13 +36,8 @@ public:
   ezVec3 SampleVelocity3D(const ezVec3& vCellIdx) const;
 
 private:
-  void CopyPreviousVelocity(float* pDst, const float* pSrc);
-  void LinearSolve(float* pDst, const float* pPrev);
-  void Project2D(float* pDstU, float* pDstV, float* pScratch1, float* pScratch2);
-  void Project3D(float* pDstU, float* pDstV, float* pDstW, float* pScratch1, float* pScratch2);
-  void Advect(float* pDst, const float* pSrc);
-
   ezTime m_UpdateStep;
+  float m_fDampenFactor = 0.995f;
   float m_fCellSize = 1.0f;
   float m_fInverseCellSize = 1.0f;
 
