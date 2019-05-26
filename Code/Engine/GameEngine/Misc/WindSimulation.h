@@ -25,9 +25,9 @@ public:
   EZ_ALWAYS_INLINE ezUInt32 Idx(ezUInt16 x, ezUInt16 y, ezUInt16 z = 0) const { return m_uiIndexOffsetZ * z + m_uiIndexOffsetY * y + x; }
   EZ_ALWAYS_INLINE bool IsVolumetric() const { return m_uiSizeZ > 1; }
 
-  float* GetVelocitiesX() const { return m_pVelocities[0]; }
-  float* GetVelocitiesY() const { return m_pVelocities[1]; }
-  float* GetVelocitiesZ() const { return m_pVelocities[2]; }
+  float* GetVelocitiesX() const { return m_pVelocities[m_uiCurVelocities][0]; }
+  float* GetVelocitiesY() const { return m_pVelocities[m_uiCurVelocities][1]; }
+  float* GetVelocitiesZ() const { return m_pVelocities[m_uiCurVelocities][2]; }
 
   ezVec3 MapPositionToCellIdx(const ezVec3& vPosition) const;
   ezVec2 MapPositionToCellIdx(const ezVec2& vPosition) const;
@@ -50,7 +50,9 @@ private:
   ezUInt16 m_uiIndexOffsetY = 0;
   ezUInt16 m_uiIndexOffsetZ = 0;
 
-  float* m_pVelocities[3] = {nullptr, nullptr, nullptr};
+  ezUInt8 m_uiCurVelocities = 0;
+
+  float* m_pVelocities[3][3] = {nullptr, nullptr, nullptr};
   float* m_pScratch[3] = {nullptr, nullptr, nullptr};
 
   ezDynamicArray<float> m_Values;

@@ -350,20 +350,23 @@ void ezWindSimulation::Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 ui
 
   const ezUInt32 numFloats = m_uiNumCells * (IsVolumetric() ? 6 : 4);
 
-  m_Values.SetCount(numFloats);
+  m_Values.SetCount(numFloats * 3);
 
   float* pCur = m_Values.GetData();
 
-  m_pVelocities[0] = pCur;
-  pCur += m_uiNumCells;
-
-  m_pVelocities[1] = pCur;
-  pCur += m_uiNumCells;
-
-  if (IsVolumetric())
+  for (ezUInt8 i = 0; i < 3; ++i)
   {
-    m_pVelocities[2] = pCur;
+    m_pVelocities[i][0] = pCur;
     pCur += m_uiNumCells;
+
+    m_pVelocities[i][1] = pCur;
+    pCur += m_uiNumCells;
+
+    if (IsVolumetric())
+    {
+      m_pVelocities[i][2] = pCur;
+      pCur += m_uiNumCells;
+    }
   }
 
   m_pScratch[0] = pCur;
@@ -386,17 +389,22 @@ void ezWindSimulation::Step(ezTime tDelta)
   // TODO: use tDelta to advance internal interpolation factor
   const float deltaTime = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
 
+  const ezUInt8 uiNextVelocities = (m_uiCurVelocities + 1) % 3;
 
   if (IsVolumetric())
   {
-    StepWindSimulation3D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_uiSizeZ, m_pVelocities[0], m_pVelocities[1], m_pVelocities[2],
-      m_pVelocities[0], m_pVelocities[1], m_pVelocities[2], m_pScratch[0], m_pScratch[1], m_pScratch[2]);
+    StepWindSimulation3D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_uiSizeZ, m_pVelocities[m_uiCurVelocities][0],
+      m_pVelocities[m_uiCurVelocities][1], m_pVelocities[m_uiCurVelocities][2], m_pVelocities[uiNextVelocities][0],
+      m_pVelocities[uiNextVelocities][1], m_pVelocities[uiNextVelocities][2], m_pScratch[0], m_pScratch[1], m_pScratch[2]);
   }
   else
   {
-    StepWindSimulation2D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_pVelocities[0], m_pVelocities[1], m_pVelocities[0],
-      m_pVelocities[1], m_pScratch[0], m_pScratch[1]);
+    StepWindSimulation2D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_pVelocities[m_uiCurVelocities][0],
+      m_pVelocities[m_uiCurVelocities][1], m_pVelocities[uiNextVelocities][0], m_pVelocities[uiNextVelocities][1], m_pScratch[0],
+      m_pScratch[1]);
   }
+
+  m_uiCurVelocities = uiNextVelocities;
 }
 
 ezVec3 ezWindSimulation::MapPositionToCellIdx(const ezVec3& vPosition) const
@@ -451,8 +459,8 @@ ezVec2 ezWindSimulation::SampleVelocity2D(const ezVec2& vCellIdx) const
   };
 
   ezVec2 res;
-  res.x = sampleComponent(m_pVelocities[0]);
-  res.y = sampleComponent(m_pVelocities[1]);
+  res.x = sampleComponent(m_pVelocities[m_uiCurVelocities][0]);
+  res.y = sampleComponent(m_pVelocities[m_uiCurVelocities][1]);
 
   return res;
 }
@@ -502,9 +510,9 @@ ezVec3 ezWindSimulation::SampleVelocity3D(const ezVec3& vCellIdx) const
   };
 
   ezVec3 res;
-  res.x = sampleComponent(m_pVelocities[0]);
-  res.y = sampleComponent(m_pVelocities[1]);
-  res.z = sampleComponent(m_pVelocities[2]);
+  res.x = sampleComponent(m_pVelocities[m_uiCurVelocities][0]);
+  res.y = sampleComponent(m_pVelocities[m_uiCurVelocities][1]);
+  res.z = sampleComponent(m_pVelocities[m_uiCurVelocities][2]);
 
   return res;
 }

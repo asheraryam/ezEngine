@@ -11,7 +11,7 @@ o
 		s %AssetType{"Scene"}
 		VarArray %Dependencies{}
 		Uuid %DocumentID{u4{11742573985409873049,5415679841540850662}}
-		u4 %Hash{4513272636236428294}
+		u4 %Hash{4060856230924721169}
 		VarArray %MetaInfo{}
 		VarArray %Outputs{}
 		VarArray %References
@@ -91,8 +91,8 @@ o
 	{
 		b %Active{1}
 		f %CellsSize{0x0000803F}
-		u1 %CellsX{32}
-		u1 %CellsY{32}
+		u1 %CellsX{64}
+		u1 %CellsY{64}
 		u1 %CellsZ{4}
 		b %Visualize{1}
 	}
@@ -424,7 +424,7 @@ o
 		s %PluginName{"Static"}
 		VarArray %Properties{}
 		s %TypeName{"ezWindVolumeComponent"}
-		u3 %TypeSize{216}
+		u3 %TypeSize{272}
 		u3 %TypeVersion{1}
 	}
 }
