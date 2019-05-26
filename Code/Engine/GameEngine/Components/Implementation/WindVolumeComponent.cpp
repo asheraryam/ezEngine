@@ -4,26 +4,28 @@
 #include <GameEngine/Components/WindVolumeComponent.h>
 #include <RendererCore/Debug/DebugRenderer.h>
 
+#define AddForce(cell, force) cell = ezMath::Max(cell, force)
+
 void ezWindVolumeComponent::addStream(int x, int y, float force)
 {
   if (m_FluidVolume.m_Simulation.IsVolumetric())
   {
-    ezVec3* vel = m_FluidVolume.m_Simulation.GetVelocities3D();
+    ezVec3* vel = m_FluidVolume.m_Simulation.GetVelocityInputs3D();
     const int z = m_FluidVolume.m_Simulation.GetSizeZ() / 2;
 
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y, z)] = ezVec3(force, 0, 0);
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y, z)], ezVec3(force, 0, 0));
 
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)] = ezVec3(force * 0.7f, force * 0.7f, 0);
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)] = ezVec3(force * 0.7f, -force * 0.7f, 0);
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)], ezVec3(force * 0.7f, force * 0.7f, 0));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)], ezVec3(force * 0.7f, -force * 0.7f, 0));
   }
   else
   {
-    ezVec2* vel = m_FluidVolume.m_Simulation.GetVelocities2D();
+    ezVec2* vel = m_FluidVolume.m_Simulation.GetVelocityInputs2D();
 
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y)] = ezVec2(force, 0);
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y)], ezVec2(force, 0));
 
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1)] = ezVec2(force * 0.7f, force * 0.7f);
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1)] = ezVec2(force * 0.7f, -force * 0.7f);
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1)], ezVec2(force * 0.7f, force * 0.7f));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1)], ezVec2(force * 0.7f, -force * 0.7f));
   }
 }
 
@@ -31,38 +33,32 @@ void ezWindVolumeComponent::addDrop(int x, int y, float force)
 {
   if (m_FluidVolume.m_Simulation.IsVolumetric())
   {
-    ezVec3* vel = m_FluidVolume.m_Simulation.GetVelocities3D();
+    ezVec3* vel = m_FluidVolume.m_Simulation.GetVelocityInputs3D();
     const int z = m_FluidVolume.m_Simulation.GetSizeZ() / 2;
 
-    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y, z)] = ezVec3(-force, 0, 0);
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y, z)] = ezVec3(+force, 0, 0);
-    vel[m_FluidVolume.m_Simulation.Idx(x, y - 1, z)] = ezVec3(0, -force, 0);
-    vel[m_FluidVolume.m_Simulation.Idx(x, y + 1, z)] = ezVec3(0, +force, 0);
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y, z)], ezVec3(-force, 0, 0));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y, z)], ezVec3(+force, 0, 0));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x, y - 1, z)], ezVec3(0, -force, 0));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x, y + 1, z)], ezVec3(0, +force, 0));
 
-    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y - 1, z)] = ezVec3(-force * 0.7f, +force * 0.7f, 0);
-
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)] = ezVec3(+force * 0.7f, +force * 0.7f, 0);
-
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)] = ezVec3(+force * 0.7f, -force * 0.7f, 0);
-
-    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y + 1, z)] = ezVec3(-force * 0.7f, -force * 0.7f, 0);
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y - 1, z)], ezVec3(-force * 0.7f, +force * 0.7f, 0));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)], ezVec3(+force * 0.7f, +force * 0.7f, 0));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)], ezVec3(+force * 0.7f, -force * 0.7f, 0));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y + 1, z)], ezVec3(-force * 0.7f, -force * 0.7f, 0));
   }
   else
   {
-    ezVec2* vel = m_FluidVolume.m_Simulation.GetVelocities2D();
+    ezVec2* vel = m_FluidVolume.m_Simulation.GetVelocityInputs2D();
 
-    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y)] = ezVec2(-force, 0);
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y)] = ezVec2(+force, 0);
-    vel[m_FluidVolume.m_Simulation.Idx(x, y - 1)] = ezVec2(0, -force);
-    vel[m_FluidVolume.m_Simulation.Idx(x, y + 1)] = ezVec2(0, +force);
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y)], ezVec2(-force, 0));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y)], ezVec2(+force, 0));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x, y - 1)], ezVec2(0, -force));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x, y + 1)], ezVec2(0, +force));
 
-    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y - 1)] = ezVec2(-force * 0.7f, +force * 0.7f);
-
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1)] = ezVec2(+force * 0.7f, +force * 0.7f);
-
-    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1)] = ezVec2(+force * 0.7f, -force * 0.7f);
-
-    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y + 1)] = ezVec2(-force * 0.7f, -force * 0.7f);
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y - 1)], ezVec2(-force * 0.7f, +force * 0.7f));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1)], ezVec2(+force * 0.7f, +force * 0.7f));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1)], ezVec2(+force * 0.7f, -force * 0.7f));
+    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y + 1)], ezVec2(-force * 0.7f, -force * 0.7f));
   }
 }
 

@@ -38,19 +38,19 @@
 
 namespace
 {
-  void CopyPreviousVelocity(ezVec2* pDst, const ezVec2* pSrc, ezUInt32 uiNumCells, float fDampenFactor)
+  void CopyPreviousVelocity(ezVec2* pDst, const ezVec2* pSrc, const ezVec2* pInputs, ezUInt32 uiNumCells, float fDampenFactor)
   {
     for (ezUInt32 i = 0; i < uiNumCells; ++i)
     {
-      pDst[i] = pSrc[i] * fDampenFactor;
+      pDst[i] = pSrc[i] * fDampenFactor + pInputs[i];
     }
   }
 
-  void CopyPreviousVelocity(ezVec3* pDst, const ezVec3* pSrc, ezUInt32 uiNumCells, float fDampenFactor)
+  void CopyPreviousVelocity(ezVec3* pDst, const ezVec3* pSrc, const ezVec3* pInputs, ezUInt32 uiNumCells, float fDampenFactor)
   {
     for (ezUInt32 i = 0; i < uiNumCells; ++i)
     {
-      pDst[i] = pSrc[i] * fDampenFactor;
+      pDst[i] = pSrc[i] * fDampenFactor + pInputs[i];
     }
   }
 
@@ -304,12 +304,12 @@ namespace
     }
   }
 
-  void StepWindSimulation2D(
-    float deltaTime, float fDampenFactor, ezUInt16 uiSizeX, ezUInt16 uiSizeY, const ezVec2* pSrc, ezVec2* pDst, ezVec2* pScratch)
+  void StepWindSimulation2D(float deltaTime, float fDampenFactor, ezUInt16 uiSizeX, ezUInt16 uiSizeY, const ezVec2* pSrc, ezVec2* pDst,
+    const ezVec2* pInputs, ezVec2* pScratch)
   {
     const ezUInt32 uiNumCells = (uiSizeX + 2) * (uiSizeY + 2);
 
-    CopyPreviousVelocity(pScratch, pSrc, uiNumCells, fDampenFactor);
+    CopyPreviousVelocity(pScratch, pSrc, pInputs, uiNumCells, fDampenFactor);
 
     Project2D(pScratch, pDst->GetData(), pDst->GetData() + uiNumCells, uiSizeX, uiSizeY);
     Advect2D(pDst, pScratch, uiSizeX, uiSizeY, deltaTime);
@@ -317,11 +317,11 @@ namespace
   }
 
   void StepWindSimulation3D(float deltaTime, float fDampenFactor, ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ, const ezVec3* pSrc,
-    ezVec3* pDst, ezVec3* pScratch)
+    ezVec3* pDst, const ezVec3* pInputs, ezVec3* pScratch)
   {
     const ezUInt32 uiNumCells = (uiSizeX + 2) * (uiSizeY + 2) * (uiSizeZ + 2);
 
-    CopyPreviousVelocity(pScratch, pSrc, uiNumCells, fDampenFactor);
+    CopyPreviousVelocity(pScratch, pSrc, pInputs, uiNumCells, fDampenFactor);
 
     Project3D(pScratch, pDst->GetData(), pDst->GetData() + uiNumCells, uiSizeX, uiSizeY, uiSizeZ);
     Advect3D(pDst, pScratch, uiSizeX, uiSizeY, uiSizeZ, deltaTime);
@@ -347,16 +347,16 @@ void ezWindSimulation::Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 ui
   m_uiIndexOffsetY = uiSizeX + 2;
   m_uiIndexOffsetZ = m_uiIndexOffsetY * (uiSizeY + 2);
 
-  ezUInt32 uiNumCells = 1;
-  uiNumCells *= (m_uiSizeX + 2);
-  uiNumCells *= (m_uiSizeY + 2);
+  m_uiNumCells = 1;
+  m_uiNumCells *= (m_uiSizeX + 2);
+  m_uiNumCells *= (m_uiSizeY + 2);
 
   if (IsVolumetric())
   {
-    uiNumCells *= (m_uiSizeZ + 2);
+    m_uiNumCells *= (m_uiSizeZ + 2);
   }
 
-  const ezUInt32 numFloats = uiNumCells * (IsVolumetric() ? 6 : 4);
+  const ezUInt32 numFloats = m_uiNumCells * (IsVolumetric() ? 6 : 4);
 
   m_Values.SetCount(numFloats * 3);
 
@@ -367,24 +367,26 @@ void ezWindSimulation::Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 ui
     if (IsVolumetric())
     {
       m_pVelocities3D[i] = reinterpret_cast<ezVec3*>(pCur);
-      pCur += uiNumCells * 3;
+      pCur += m_uiNumCells * 3;
     }
     else
     {
       m_pVelocities2D[i] = reinterpret_cast<ezVec2*>(pCur);
-      pCur += uiNumCells * 2;
+      pCur += m_uiNumCells * 2;
     }
   }
 
   if (IsVolumetric())
   {
     m_pScratch3D = reinterpret_cast<ezVec3*>(pCur);
-    pCur += uiNumCells * 3;
+    m_pVelocityInputs3D = m_pScratch3D; // reuses the same data
+    pCur += m_uiNumCells * 3;
   }
   else
   {
     m_pScratch2D = reinterpret_cast<ezVec2*>(pCur);
-    pCur += uiNumCells * 2;
+    m_pVelocityInputs2D = m_pScratch2D; // reuses the same data
+    pCur += m_uiNumCells * 2;
   }
 }
 
@@ -392,23 +394,40 @@ void ezWindSimulation::Step(ezTime tDelta)
 {
   EZ_PROFILE_SCOPE("Wind Simulation");
 
-  // TODO: use tDelta to advance internal interpolation factor
-  const float deltaTime = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
+  const float fNewLerp = m_fUpdateFraction + tDelta.AsFloatInSeconds() / m_UpdateStep.AsFloatInSeconds();
 
-  const ezUInt8 uiNextVelocities = (m_uiCurVelocities + 1) % 3;
-
-  if (IsVolumetric())
+  if (fNewLerp >= 1.0f)
   {
-    StepWindSimulation3D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_uiSizeZ, m_pVelocities3D[m_uiCurVelocities],
-      m_pVelocities3D[uiNextVelocities], m_pScratch3D);
+    const float deltaTime = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
+
+    const ezUInt8 uiNextVelocities = (m_uiCurVelocities + 1) % 3;
+
+    if (IsVolumetric())
+    {
+      StepWindSimulation3D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_uiSizeZ, m_pVelocities3D[m_uiCurVelocities],
+        m_pVelocities3D[uiNextVelocities], m_pVelocityInputs3D, m_pScratch3D);
+
+      ezMemoryUtils::ZeroFill(m_pVelocityInputs3D, m_uiNumCells);
+    }
+    else
+    {
+      StepWindSimulation2D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_pVelocities2D[m_uiCurVelocities],
+        m_pVelocities2D[uiNextVelocities], m_pVelocityInputs2D, m_pScratch2D);
+
+      ezMemoryUtils::ZeroFill(m_pVelocityInputs2D, m_uiNumCells);
+    }
+
+    // TODO: this has to be thread-safe, at least if sampling should lerp between the data
+    {
+      m_fUpdateFraction = ezMath::Clamp(fNewLerp - 1.0f, 0.0f, 1.0f);
+      m_uiPrevVelocities = m_uiCurVelocities;
+      m_uiCurVelocities = uiNextVelocities;
+    }
   }
   else
   {
-    StepWindSimulation2D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_pVelocities2D[m_uiCurVelocities],
-      m_pVelocities2D[uiNextVelocities], m_pScratch2D);
+    m_fUpdateFraction = fNewLerp;
   }
-
-  m_uiCurVelocities = uiNextVelocities;
 }
 
 ezVec3 ezWindSimulation::MapPositionToCellIdx(const ezVec3& vPosition) const
@@ -462,6 +481,8 @@ ezVec2 ezWindSimulation::SampleVelocity2D(const ezVec2& vCellIdx) const
     return s0 * (t0 * pSrc[i0j0] + t1 * pSrc[i0j1]) + s1 * (t0 * pSrc[i1j0] + t1 * pSrc[i1j1]);
   };
 
+  // probably not necessary at 10 Hz
+  //return ezMath::Lerp(sampleComponent(m_pVelocities2D[m_uiPrevVelocities]), sampleComponent(m_pVelocities2D[m_uiCurVelocities]), m_fLerpFactor);
   return sampleComponent(m_pVelocities2D[m_uiCurVelocities]);
 }
 
@@ -509,5 +530,7 @@ ezVec3 ezWindSimulation::SampleVelocity3D(const ezVec3& vCellIdx) const
            r1 * (s0 * (t0 * pSrc[i0j0k1] + t1 * pSrc[i0j1k1]) + s1 * (t0 * pSrc[i1j0k1] + t1 * pSrc[i1j1k1]));
   };
 
+  // probably not necessary at 10 Hz
+  //return ezMath::Lerp(sampleComponent(m_pVelocities3D[m_uiPrevVelocities]), sampleComponent(m_pVelocities3D[m_uiCurVelocities]), m_fLerpFactor);
   return sampleComponent(m_pVelocities3D[m_uiCurVelocities]);
 }
