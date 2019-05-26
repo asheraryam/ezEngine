@@ -103,9 +103,9 @@ public:
   void PostMessage(const ezMessage& msg, ezObjectMsgQueueType::Enum queueType, ezTime delay) const;
 
   /// \brief Stores a custom flag. Index must be between 0 and 7.
-///
-/// This is for component specific usage to have some bool values without additional memory consumption.
-/// Be careful to check which flags may already be in use by base classes.
+  ///
+  /// This is for component specific usage to have some bool values without additional memory consumption.
+  /// Be careful to check which flags may already be in use by base classes.
   void SetUserFlag(ezUInt8 flagIndex, bool set);
 
   /// \brief Retrieves a custom flag. Index must be between 0 and 7.
@@ -160,7 +160,7 @@ protected:
   /// \sa OnActivated(), OnDeactivated(), Initialize(), Deinitialize(), OnSimulationStarted()
   virtual void OnDeactivated();
 
-  /// \brief This method is called once for active components, at the start of the next world update, but only when the world is simulated.
+  /// \brief This method is called once for active components, at the start of the next world update, but only when the world is being simulated.
   ///
   /// This is the one preferred method to setup typical game logic. In a pure game environment there is no practical difference between
   /// OnActivated() and OnSimulationStarted(), as OnSimulationStarted() will be called right after OnActivated().
@@ -172,10 +172,8 @@ protected:
   /// editor. If instead the sound gets started in OnSimulationStarted(), it will only play once the user starts the game mode inside the
   /// editor.
   ///
-  /// Additionally, OnSimulationStarted() is only ever executed once on a component, even if the ezWorld pauses and resumes world simulation
-  /// multiple times. Thus components that should only execute a thing exactly once, will work correctly. In contrast OnActivated() and
-  /// OnDeactivated() will be executed every time the component's active state is toggled, which could re-execute the same behavior multiple
-  /// times.
+  /// Just as OnActivated(), OnSimulationStarted() is executed every time the component's active state is toggled from inactive to active,
+  /// unless the ezWorld's simulation state has been paused.
   ///
   /// \sa OnActivated(), OnDeactivated(), Initialize(), Deinitialize(), OnSimulationStarted()
   virtual void OnSimulationStarted();
@@ -210,4 +208,3 @@ private:
 };
 
 #include <Core/World/Implementation/Component_inl.h>
-

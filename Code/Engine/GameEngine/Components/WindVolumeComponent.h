@@ -42,7 +42,7 @@ public:
 
 protected:
    
-  virtual void OnActivated() override;
+  virtual void OnSimulationStarted() override;
   virtual void OnDeactivated() override;
 
   void addStream(int x, int y, float force);

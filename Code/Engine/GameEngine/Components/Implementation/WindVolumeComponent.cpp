@@ -6,41 +6,64 @@
 
 void ezWindVolumeComponent::addStream(int x, int y, float force)
 {
-  float* u = m_FluidVolume.m_Simulation.GetVelocitiesX();
-  float* v = m_FluidVolume.m_Simulation.GetVelocitiesY();
-  const int z = m_FluidVolume.m_Simulation.IsVolumetric() ? m_FluidVolume.m_Simulation.GetSizeZ() / 2 : 0;
+  if (m_FluidVolume.m_Simulation.IsVolumetric())
+  {
+    ezVec3* vel = m_FluidVolume.m_Simulation.GetVelocities3D();
+    const int z = m_FluidVolume.m_Simulation.GetSizeZ() / 2;
 
-  u[m_FluidVolume.m_Simulation.Idx(x + 1, y, z)] = +force;
-  v[m_FluidVolume.m_Simulation.Idx(x + 1, y, z)] = 0;
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y, z)] = ezVec3(force, 0, 0);
 
-  u[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)] = +force * 0.7f;
-  v[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)] = +force * 0.7f;
-  u[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)] = +force * 0.7f;
-  v[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)] = -force * 0.7f;
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)] = ezVec3(force * 0.7f, force * 0.7f, 0);
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)] = ezVec3(force * 0.7f, -force * 0.7f, 0);
+  }
+  else
+  {
+    ezVec2* vel = m_FluidVolume.m_Simulation.GetVelocities2D();
+
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y)] = ezVec2(force, 0);
+
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1)] = ezVec2(force * 0.7f, force * 0.7f);
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1)] = ezVec2(force * 0.7f, -force * 0.7f);
+  }
 }
 
 void ezWindVolumeComponent::addDrop(int x, int y, float force)
 {
-  float* u = m_FluidVolume.m_Simulation.GetVelocitiesX();
-  float* v = m_FluidVolume.m_Simulation.GetVelocitiesY();
-  const int z = m_FluidVolume.m_Simulation.IsVolumetric() ? m_FluidVolume.m_Simulation.GetSizeZ() / 2 : 0;
+  if (m_FluidVolume.m_Simulation.IsVolumetric())
+  {
+    ezVec3* vel = m_FluidVolume.m_Simulation.GetVelocities3D();
+    const int z = m_FluidVolume.m_Simulation.GetSizeZ() / 2;
 
-  u[m_FluidVolume.m_Simulation.Idx(x - 1, y, z)] = -force;
-  u[m_FluidVolume.m_Simulation.Idx(x + 1, y, z)] = +force;
-  v[m_FluidVolume.m_Simulation.Idx(x, y - 1, z)] = -force;
-  v[m_FluidVolume.m_Simulation.Idx(x, y + 1, z)] = +force;
+    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y, z)] = ezVec3(-force, 0, 0);
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y, z)] = ezVec3(+force, 0, 0);
+    vel[m_FluidVolume.m_Simulation.Idx(x, y - 1, z)] = ezVec3(0, -force, 0);
+    vel[m_FluidVolume.m_Simulation.Idx(x, y + 1, z)] = ezVec3(0, +force, 0);
 
-  u[m_FluidVolume.m_Simulation.Idx(x - 1, y - 1, z)] = -force * 0.7f;
-  v[m_FluidVolume.m_Simulation.Idx(x - 1, y - 1, z)] = +force * 0.7f;
+    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y - 1, z)] = ezVec3(-force * 0.7f, +force * 0.7f, 0);
 
-  u[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)] = +force * 0.7f;
-  v[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)] = +force * 0.7f;
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)] = ezVec3(+force * 0.7f, +force * 0.7f, 0);
 
-  u[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)] = +force * 0.7f;
-  v[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)] = -force * 0.7f;
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)] = ezVec3(+force * 0.7f, -force * 0.7f, 0);
 
-  u[m_FluidVolume.m_Simulation.Idx(x - 1, y + 1, z)] = -force * 0.7f;
-  v[m_FluidVolume.m_Simulation.Idx(x - 1, y + 1, z)] = -force * 0.7f;
+    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y + 1, z)] = ezVec3(-force * 0.7f, -force * 0.7f, 0);
+  }
+  else
+  {
+    ezVec2* vel = m_FluidVolume.m_Simulation.GetVelocities2D();
+
+    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y)] = ezVec2(-force, 0);
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y)] = ezVec2(+force, 0);
+    vel[m_FluidVolume.m_Simulation.Idx(x, y - 1)] = ezVec2(0, -force);
+    vel[m_FluidVolume.m_Simulation.Idx(x, y + 1)] = ezVec2(0, +force);
+
+    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y - 1)] = ezVec2(-force * 0.7f, +force * 0.7f);
+
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1)] = ezVec2(+force * 0.7f, +force * 0.7f);
+
+    vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1)] = ezVec2(+force * 0.7f, -force * 0.7f);
+
+    vel[m_FluidVolume.m_Simulation.Idx(x - 1, y + 1)] = ezVec2(-force * 0.7f, -force * 0.7f);
+  }
 }
 
 
@@ -89,7 +112,7 @@ void ezWindVolumeComponent::SerializeComponent(ezWorldWriter& stream) const
 void ezWindVolumeComponent::DeserializeComponent(ezWorldReader& stream)
 {
   SUPER::DeserializeComponent(stream);
-  //const ezUInt32 uiVersion = stream.GetComponentTypeVersion(GetStaticRTTI());
+  // const ezUInt32 uiVersion = stream.GetComponentTypeVersion(GetStaticRTTI());
   auto& s = stream.GetStream();
 
   // Version 1
@@ -103,9 +126,9 @@ void ezWindVolumeComponent::DeserializeComponent(ezWorldReader& stream)
 static int maxDrops = 20;
 static int maxStream = 500;
 
-void ezWindVolumeComponent::OnActivated()
+void ezWindVolumeComponent::OnSimulationStarted()
 {
-  SUPER::OnSimulationStarted();
+  EZ_ASSERT_DEV(m_pWindModule == nullptr, "Wind module should be null");
 
   maxDrops = 20;
   maxStream = 500;
@@ -159,7 +182,6 @@ void ezWindVolumeComponent::Update()
   m_FluidVolume.m_vPosition = ownTransform.m_vPosition;
   m_FluidVolume.m_qRotation = ownTransform.m_qRotation;
 
-  // draw_velocity
   if (m_bVisualize)
   {
     EZ_PROFILE_SCOPE("draw_velocity");
@@ -167,9 +189,6 @@ void ezWindVolumeComponent::Update()
     ezDynamicArray<ezDebugRenderer::Line> lines;
     lines.Reserve(m_FluidVolume.m_Simulation.GetSizeX() * m_FluidVolume.m_Simulation.GetSizeY() * m_FluidVolume.m_Simulation.GetSizeZ());
 
-    const float* u = m_FluidVolume.m_Simulation.GetVelocitiesX();
-    const float* v = m_FluidVolume.m_Simulation.GetVelocitiesY();
-    const float* w = m_FluidVolume.m_Simulation.GetVelocitiesZ();
 
     const float h = m_FluidVolume.m_Simulation.GetCellSize();
     const float h2 = h * 0.5f;
@@ -181,10 +200,40 @@ void ezWindVolumeComponent::Update()
 
     const ezTransform ownerTransform = GetOwner()->GetGlobalTransform();
 
-    for (int k0 = 1; k0 <= m_FluidVolume.m_Simulation.GetSizeZ(); k0++)
+    if (m_FluidVolume.m_Simulation.IsVolumetric())
     {
-      const int k = m_FluidVolume.m_Simulation.IsVolumetric() ? k0 : 0;
-      const float z = (k - 0.5f) * h;
+      const ezVec3* vel = m_FluidVolume.m_Simulation.GetVelocities3D();
+
+      for (int k = 1; k <= m_FluidVolume.m_Simulation.GetSizeZ(); k++)
+      {
+        const float z = (k - 0.5f) * h;
+
+        for (int j = 1; j <= m_FluidVolume.m_Simulation.GetSizeY(); j++)
+        {
+          const float y = (j - 0.5f) * h;
+
+          for (int i = 1; i <= m_FluidVolume.m_Simulation.GetSizeX(); i++)
+          {
+            const float x = (i - 0.5f) * h;
+
+            auto& l = lines.ExpandAndGetRef();
+            l.m_start.Set(x, y, z);
+            l.m_start += vOffset;
+            l.m_start = ownerTransform * l.m_start;
+
+            const ezVec3 sample = vel[m_FluidVolume.m_Simulation.Idx(i, j, k)];
+
+            l.m_end.Set(x + sample.x * h2, y + sample.y * h2, z + sample.z * h2);
+
+            l.m_end += vOffset;
+            l.m_end = ownerTransform * l.m_end;
+          }
+        }
+      }
+    }
+    else
+    {
+      const ezVec2* vel = m_FluidVolume.m_Simulation.GetVelocities2D();
 
       for (int j = 1; j <= m_FluidVolume.m_Simulation.GetSizeY(); j++)
       {
@@ -195,19 +244,13 @@ void ezWindVolumeComponent::Update()
           const float x = (i - 0.5f) * h;
 
           auto& l = lines.ExpandAndGetRef();
-          l.m_start.Set(x, y, z);
+          l.m_start.Set(x, y, 0);
           l.m_start += vOffset;
           l.m_start = ownerTransform * l.m_start;
 
-          if (w != nullptr)
-          {
-            l.m_end.Set(x + u[m_FluidVolume.m_Simulation.Idx(i, j, k)] * h2, y + v[m_FluidVolume.m_Simulation.Idx(i, j, k)] * h2,
-              z + w[m_FluidVolume.m_Simulation.Idx(i, j, k)] * h2);
-          }
-          else
-          {
-            l.m_end.Set(x + u[m_FluidVolume.m_Simulation.Idx(i, j)] * h2, y + v[m_FluidVolume.m_Simulation.Idx(i, j)] * h2, z);
-          }
+          const ezVec2 sample = vel[m_FluidVolume.m_Simulation.Idx(i, j)];
+
+          l.m_end.Set(x + sample.x * h2, y + sample.y * h2, 0);
 
           l.m_end += vOffset;
           l.m_end = ownerTransform * l.m_end;
