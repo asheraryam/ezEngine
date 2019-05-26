@@ -51,7 +51,7 @@ private:
   ezUInt16 m_uiIndexOffsetZ = 0;
 
   float* m_pVelocities[3] = {nullptr, nullptr, nullptr};
-  float* m_pPrevVelocities[3] = {nullptr, nullptr, nullptr};
+  float* m_pScratch[3] = {nullptr, nullptr, nullptr};
 
   ezDynamicArray<float> m_Values;
 };

@@ -105,7 +105,7 @@ namespace
     }
   }
 
-  void Project2D(float* pDstU, float* pDstV, float* pScratch1, float* pScratch2, const ezUInt16 uiSizeX, const ezUInt16 uiSizeY)
+  void Project2D(float* pSrcDstU, float* pSrcDstV, float* pScratch1, float* pScratch2, const ezUInt16 uiSizeX, const ezUInt16 uiSizeY)
   {
     const float fNorm = -0.5f;
     const ezUInt32 uiNumCells = (uiSizeX + 2) * (uiSizeY + 2);
@@ -122,7 +122,8 @@ namespace
         const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
         const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
 
-        pScratch2[Idx2D(x, y)] = (pDstU[Idx2D(xp, y)] - pDstU[Idx2D(xm, y)] + pDstV[Idx2D(x, yp)] - pDstV[Idx2D(x, ym)]) * fNorm;
+        pScratch2[Idx2D(x, y)] =
+          (pSrcDstU[Idx2D(xp, y)] - pSrcDstU[Idx2D(xm, y)] + pSrcDstV[Idx2D(x, yp)] - pSrcDstV[Idx2D(x, ym)]) * fNorm;
       }
     }
 
@@ -142,13 +143,13 @@ namespace
         const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
         const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
 
-        pDstU[Idx2D(x, y)] -= fNorm2 * (pScratch1[Idx2D(xp, y)] - pScratch1[Idx2D(xm, y)]);
-        pDstV[Idx2D(x, y)] -= fNorm2 * (pScratch1[Idx2D(x, yp)] - pScratch1[Idx2D(x, ym)]);
+        pSrcDstU[Idx2D(x, y)] -= fNorm2 * (pScratch1[Idx2D(xp, y)] - pScratch1[Idx2D(xm, y)]);
+        pSrcDstV[Idx2D(x, y)] -= fNorm2 * (pScratch1[Idx2D(x, yp)] - pScratch1[Idx2D(x, ym)]);
       }
     }
   }
 
-  void Project3D(float* pDstU, float* pDstV, float* pDstW, float* pScratch1, float* pScratch2, const ezUInt16 uiSizeX,
+  void Project3D(float* pSrcDstU, float* pSrcDstV, float* pSrcDstW, float* pScratch1, float* pScratch2, const ezUInt16 uiSizeX,
     const ezUInt16 uiSizeY, const ezUInt16 uiSizeZ)
   {
     const float fNorm = -0.33f;
@@ -171,8 +172,8 @@ namespace
           const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
           const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
 
-          pScratch2[Idx3D(x, y, z)] = fNorm * (pDstU[Idx3D(xp, y, z)] - pDstU[Idx3D(xm, y, z)] + pDstV[Idx3D(x, yp, z)] -
-                                                pDstV[Idx3D(x, ym, z)] + pDstW[Idx3D(x, y, zp)] - pDstW[Idx3D(x, y, zm)]);
+          pScratch2[Idx3D(x, y, z)] = fNorm * (pSrcDstU[Idx3D(xp, y, z)] - pSrcDstU[Idx3D(xm, y, z)] + pSrcDstV[Idx3D(x, yp, z)] -
+                                                pSrcDstV[Idx3D(x, ym, z)] + pSrcDstW[Idx3D(x, y, zp)] - pSrcDstW[Idx3D(x, y, zm)]);
         }
       }
     }
@@ -198,19 +199,17 @@ namespace
           const ezInt32 xm = ezMath::Max<ezInt32>(x - 1, ClampMinX);
           const ezInt32 xp = ezMath::Min<ezInt32>(x + 1, ClampMaxX);
 
-          pDstU[Idx3D(x, y, z)] -= fNorm2 * (pScratch1[Idx3D(xp, y, z)] - pScratch1[Idx3D(xm, y, z)]);
-          pDstV[Idx3D(x, y, z)] -= fNorm2 * (pScratch1[Idx3D(x, yp, z)] - pScratch1[Idx3D(x, ym, z)]);
-          pDstW[Idx3D(x, y, z)] -= fNorm2 * (pScratch1[Idx3D(x, y, zp)] - pScratch1[Idx3D(x, y, zm)]);
+          pSrcDstU[Idx3D(x, y, z)] -= fNorm2 * (pScratch1[Idx3D(xp, y, z)] - pScratch1[Idx3D(xm, y, z)]);
+          pSrcDstV[Idx3D(x, y, z)] -= fNorm2 * (pScratch1[Idx3D(x, yp, z)] - pScratch1[Idx3D(x, ym, z)]);
+          pSrcDstW[Idx3D(x, y, z)] -= fNorm2 * (pScratch1[Idx3D(x, y, zp)] - pScratch1[Idx3D(x, y, zm)]);
         }
       }
     }
   }
 
-  void Advect2D(
-    float* pDst, const float* pSrc, const float* pSrcX, const float* pSrcY, const ezUInt16 uiSizeX, const ezUInt16 uiSizeY, const float dt0)
+  void Advect2D(float* pDst, const float* pSrc, const float* pSrcX, const float* pSrcY, const ezUInt16 uiSizeX, const ezUInt16 uiSizeY,
+    const float deltaTime)
   {
-    // const float dt0 = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
-
     const float minX = 0.5f + ClampOffset;
     const float minY = 0.5f + ClampOffset;
     const float maxX = uiSizeX + 0.5f - ClampOffset;
@@ -223,8 +222,8 @@ namespace
       for (ezUInt32 i = 1; i <= uiSizeX; ++i)
       {
         // compute reverse velocity sample position
-        const float x = ezMath::Clamp(i - dt0 * pSrcX[Idx2D(i, j)], minX, maxX);
-        const float y = ezMath::Clamp(j - dt0 * pSrcY[Idx2D(i, j)], minY, maxY);
+        const float x = ezMath::Clamp(i - deltaTime * pSrcX[Idx2D(i, j)], minX, maxX);
+        const float y = ezMath::Clamp(j - deltaTime * pSrcY[Idx2D(i, j)], minY, maxY);
 
         // bilinear interpolate from the 4 sample position cells
         const ezUInt32 i0 = (ezUInt32)x;
@@ -244,10 +243,8 @@ namespace
   }
 
   void Advect3D(float* pDst, const float* pSrc, const float* pSrcX, const float* pSrcY, const float* pSrcZ, const ezUInt16 uiSizeX,
-    const ezUInt16 uiSizeY, const ezUInt16 uiSizeZ, const float dt0)
+    const ezUInt16 uiSizeY, const ezUInt16 uiSizeZ, const float deltaTime)
   {
-    // const float dt0 = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
-
     const float minX = 0.5f + ClampOffset;
     const float minY = 0.5f + ClampOffset;
     const float minZ = 0.5f + ClampOffset;
@@ -264,9 +261,9 @@ namespace
         for (ezUInt32 i = 1; i <= uiSizeX; ++i)
         {
           // compute reverse velocity sample position
-          const float x = ezMath::Clamp(i - dt0 * pSrcX[Idx3D(i, j, k)], minX, maxX);
-          const float y = ezMath::Clamp(j - dt0 * pSrcY[Idx3D(i, j, k)], minY, maxY);
-          const float z = ezMath::Clamp(k - dt0 * pSrcZ[Idx3D(i, j, k)], minZ, maxZ);
+          const float x = ezMath::Clamp(i - deltaTime * pSrcX[Idx3D(i, j, k)], minX, maxX);
+          const float y = ezMath::Clamp(j - deltaTime * pSrcY[Idx3D(i, j, k)], minY, maxY);
+          const float z = ezMath::Clamp(k - deltaTime * pSrcZ[Idx3D(i, j, k)], minZ, maxZ);
 
           // trilinear interpolate from the 8 sample position cells
           const ezUInt32 i0 = (ezUInt32)x;
@@ -290,6 +287,36 @@ namespace
         }
       }
     }
+  }
+
+  void StepWindSimulation2D(float deltaTime, float fDampenFactor, ezUInt16 uiSizeX, ezUInt16 uiSizeY, const float* pSrcX,
+    const float* pSrcY, float* pDstX, float* pDstY, float* pScratch1, float* pScratch2)
+  {
+    const ezUInt32 uiNumCells = (uiSizeX + 2) * (uiSizeY + 2);
+
+    CopyPreviousVelocity(pScratch1, pSrcX, uiNumCells, fDampenFactor);
+    CopyPreviousVelocity(pScratch2, pSrcY, uiNumCells, fDampenFactor);
+
+    Project2D(pScratch1, pScratch2, pDstX, pDstY, uiSizeX, uiSizeY);
+    Advect2D(pDstX, pScratch1, pScratch1, pScratch2, uiSizeX, uiSizeY, deltaTime);
+    Advect2D(pDstY, pScratch2, pScratch1, pScratch2, uiSizeX, uiSizeY, deltaTime);
+    Project2D(pDstX, pDstY, pScratch1, pScratch2, uiSizeX, uiSizeY);
+  }
+
+  void StepWindSimulation3D(float deltaTime, float fDampenFactor, ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ, const float* pSrcX,
+    const float* pSrcY, const float* pSrcZ, float* pDstX, float* pDstY, float* pDstZ, float* pScratch1, float* pScratch2, float* pScratch3)
+  {
+    const ezUInt32 uiNumCells = (uiSizeX + 2) * (uiSizeY + 2) * (uiSizeZ + 2);
+
+    CopyPreviousVelocity(pScratch1, pSrcX, uiNumCells, fDampenFactor);
+    CopyPreviousVelocity(pScratch2, pSrcY, uiNumCells, fDampenFactor);
+    CopyPreviousVelocity(pScratch3, pSrcZ, uiNumCells, fDampenFactor);
+
+    Project3D(pScratch1, pScratch2, pScratch3, pDstX, pDstY, uiSizeX, uiSizeY, uiSizeZ);
+    Advect3D(pDstX, pScratch1, pScratch1, pScratch2, pScratch3, uiSizeX, uiSizeY, uiSizeZ, deltaTime);
+    Advect3D(pDstY, pScratch2, pScratch1, pScratch2, pScratch3, uiSizeX, uiSizeY, uiSizeZ, deltaTime);
+    Advect3D(pDstZ, pScratch3, pScratch1, pScratch2, pScratch3, uiSizeX, uiSizeY, uiSizeZ, deltaTime);
+    Project3D(pDstX, pDstY, pDstZ, pScratch1, pScratch2, uiSizeX, uiSizeY, uiSizeZ);
   }
 } // namespace
 
@@ -339,15 +366,15 @@ void ezWindSimulation::Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 ui
     pCur += m_uiNumCells;
   }
 
-  m_pPrevVelocities[0] = pCur;
+  m_pScratch[0] = pCur;
   pCur += m_uiNumCells;
 
-  m_pPrevVelocities[1] = pCur;
+  m_pScratch[1] = pCur;
   pCur += m_uiNumCells;
 
   if (IsVolumetric())
   {
-    m_pPrevVelocities[2] = pCur;
+    m_pScratch[2] = pCur;
     pCur += m_uiNumCells;
   }
 }
@@ -357,31 +384,18 @@ void ezWindSimulation::Step(ezTime tDelta)
   EZ_PROFILE_SCOPE("Wind Simulation");
 
   // TODO: use tDelta to advance internal interpolation factor
-  const float dt0 = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
+  const float deltaTime = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
 
-  CopyPreviousVelocity(m_pPrevVelocities[0], m_pVelocities[0], m_uiNumCells, m_fDampenFactor);
-  CopyPreviousVelocity(m_pPrevVelocities[1], m_pVelocities[1], m_uiNumCells, m_fDampenFactor);
 
   if (IsVolumetric())
   {
-    CopyPreviousVelocity(m_pPrevVelocities[2], m_pVelocities[2], m_uiNumCells, m_fDampenFactor);
-    Project3D(m_pPrevVelocities[0], m_pPrevVelocities[1], m_pPrevVelocities[2], m_pVelocities[0], m_pVelocities[1], m_uiSizeX, m_uiSizeY,
-      m_uiSizeZ);
-    Advect3D(m_pVelocities[0], m_pPrevVelocities[0], m_pPrevVelocities[0], m_pPrevVelocities[1], m_pPrevVelocities[2], m_uiSizeX, m_uiSizeY,
-      m_uiSizeZ, dt0);
-    Advect3D(m_pVelocities[1], m_pPrevVelocities[1], m_pPrevVelocities[0], m_pPrevVelocities[1], m_pPrevVelocities[2], m_uiSizeX, m_uiSizeY,
-      m_uiSizeZ, dt0);
-    Advect3D(m_pVelocities[2], m_pPrevVelocities[2], m_pPrevVelocities[0], m_pPrevVelocities[1], m_pPrevVelocities[2], m_uiSizeX, m_uiSizeY,
-      m_uiSizeZ, dt0);
-    Project3D(
-      m_pVelocities[0], m_pVelocities[1], m_pVelocities[2], m_pPrevVelocities[0], m_pPrevVelocities[1], m_uiSizeX, m_uiSizeY, m_uiSizeZ);
+    StepWindSimulation3D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_uiSizeZ, m_pVelocities[0], m_pVelocities[1], m_pVelocities[2],
+      m_pVelocities[0], m_pVelocities[1], m_pVelocities[2], m_pScratch[0], m_pScratch[1], m_pScratch[2]);
   }
   else
   {
-    Project2D(m_pPrevVelocities[0], m_pPrevVelocities[1], m_pVelocities[0], m_pVelocities[1], m_uiSizeX, m_uiSizeY);
-    Advect2D(m_pVelocities[0], m_pPrevVelocities[0], m_pPrevVelocities[0], m_pPrevVelocities[1], m_uiSizeX, m_uiSizeY, dt0);
-    Advect2D(m_pVelocities[1], m_pPrevVelocities[1], m_pPrevVelocities[0], m_pPrevVelocities[1], m_uiSizeX, m_uiSizeY, dt0);
-    Project2D(m_pVelocities[0], m_pVelocities[1], m_pPrevVelocities[0], m_pPrevVelocities[1], m_uiSizeX, m_uiSizeY);
+    StepWindSimulation2D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_pVelocities[0], m_pVelocities[1], m_pVelocities[0],
+      m_pVelocities[1], m_pScratch[0], m_pScratch[1]);
   }
 }
 
