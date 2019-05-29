@@ -351,42 +351,46 @@ void ezWindSimulation::Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 ui
   m_uiNumCells *= (m_uiSizeX + 2);
   m_uiNumCells *= (m_uiSizeY + 2);
 
+  // Prev Velocity + Current Velocity + Next Velocity + Input Velocities + Scratch Data
+  const ezUInt32 uiNumLayers = 5;
+
   if (IsVolumetric())
   {
     m_uiNumCells *= (m_uiSizeZ + 2);
-  }
 
-  const ezUInt32 numFloats = m_uiNumCells * (IsVolumetric() ? 6 : 4);
+    const ezUInt32 uiLayerSize = m_uiNumCells * 3;
 
-  m_Values.SetCount(numFloats * 3);
+    m_Values.SetCount(uiNumLayers * uiLayerSize);
+    float* pCur = m_Values.GetData();
 
-  float* pCur = m_Values.GetData();
-
-  for (ezUInt8 i = 0; i < 3; ++i)
-  {
-    if (IsVolumetric())
-    {
-      m_pVelocities3D[i] = reinterpret_cast<ezVec3*>(pCur);
-      pCur += m_uiNumCells * 3;
-    }
-    else
-    {
-      m_pVelocities2D[i] = reinterpret_cast<ezVec2*>(pCur);
-      pCur += m_uiNumCells * 2;
-    }
-  }
-
-  if (IsVolumetric())
-  {
+    m_pVelocities3D[0] = reinterpret_cast<ezVec3*>(pCur);
+    pCur += uiLayerSize;
+    m_pVelocities3D[1] = reinterpret_cast<ezVec3*>(pCur);
+    pCur += uiLayerSize;
+    m_pVelocities3D[2] = reinterpret_cast<ezVec3*>(pCur);
+    pCur += uiLayerSize;
+    m_pVelocityInputs3D = reinterpret_cast<ezVec3*>(pCur);
+    pCur += uiLayerSize;
     m_pScratch3D = reinterpret_cast<ezVec3*>(pCur);
-    m_pVelocityInputs3D = m_pScratch3D; // reuses the same data
-    pCur += m_uiNumCells * 3;
+    pCur += uiLayerSize;
   }
   else
   {
+    const ezUInt32 uiLayerSize = m_uiNumCells * 2;
+
+    m_Values.SetCount(uiNumLayers * uiLayerSize);
+    float* pCur = m_Values.GetData();
+
+    m_pVelocities2D[0] = reinterpret_cast<ezVec2*>(pCur);
+    pCur += uiLayerSize;
+    m_pVelocities2D[1] = reinterpret_cast<ezVec2*>(pCur);
+    pCur += uiLayerSize;
+    m_pVelocities2D[2] = reinterpret_cast<ezVec2*>(pCur);
+    pCur += uiLayerSize;
+    m_pVelocityInputs2D = reinterpret_cast<ezVec2*>(pCur);
+    pCur += uiLayerSize;
     m_pScratch2D = reinterpret_cast<ezVec2*>(pCur);
-    m_pVelocityInputs2D = m_pScratch2D; // reuses the same data
-    pCur += m_uiNumCells * 2;
+    pCur += uiLayerSize;
   }
 }
 
@@ -482,7 +486,8 @@ ezVec2 ezWindSimulation::SampleVelocity2D(const ezVec2& vCellIdx) const
   };
 
   // probably not necessary at 10 Hz
-  //return ezMath::Lerp(sampleComponent(m_pVelocities2D[m_uiPrevVelocities]), sampleComponent(m_pVelocities2D[m_uiCurVelocities]), m_fLerpFactor);
+  // return ezMath::Lerp(sampleComponent(m_pVelocities2D[m_uiPrevVelocities]), sampleComponent(m_pVelocities2D[m_uiCurVelocities]),
+  // m_fLerpFactor);
   return sampleComponent(m_pVelocities2D[m_uiCurVelocities]);
 }
 
@@ -531,6 +536,7 @@ ezVec3 ezWindSimulation::SampleVelocity3D(const ezVec3& vCellIdx) const
   };
 
   // probably not necessary at 10 Hz
-  //return ezMath::Lerp(sampleComponent(m_pVelocities3D[m_uiPrevVelocities]), sampleComponent(m_pVelocities3D[m_uiCurVelocities]), m_fLerpFactor);
+  // return ezMath::Lerp(sampleComponent(m_pVelocities3D[m_uiPrevVelocities]), sampleComponent(m_pVelocities3D[m_uiCurVelocities]),
+  // m_fLerpFactor);
   return sampleComponent(m_pVelocities3D[m_uiCurVelocities]);
 }
