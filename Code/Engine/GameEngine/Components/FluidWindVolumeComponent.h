@@ -5,8 +5,9 @@
 #include <Core/World/World.h>
 #include <Core/World/Component.h>
 #include <GameEngine/Misc/WindSimulation.h>
+#include <GameEngine/Interfaces/WindWorldModule.h>
 
-typedef ezComponentManagerSimple<class ezWindVolumeComponent, ezComponentUpdateType::WhenSimulating> ezWindVolumeComponentManager;
+typedef ezComponentManagerSimple<class ezFluidWindVolumeComponent, ezComponentUpdateType::WhenSimulating> ezWindVolumeComponentManager;
 
 class ezFluidWindVolume : public ezWindVolume
 {
@@ -18,13 +19,13 @@ public:
   ezWindSimulation m_Simulation;
 };
 
-class EZ_GAMEENGINE_DLL ezWindVolumeComponent : public ezComponent
+class EZ_GAMEENGINE_DLL ezFluidWindVolumeComponent : public ezComponent
 {
-  EZ_DECLARE_COMPONENT_TYPE(ezWindVolumeComponent, ezComponent, ezWindVolumeComponentManager);
+  EZ_DECLARE_COMPONENT_TYPE(ezFluidWindVolumeComponent, ezComponent, ezWindVolumeComponentManager);
 
 public:
-  ezWindVolumeComponent();
-  ~ezWindVolumeComponent();
+  ezFluidWindVolumeComponent();
+  ~ezFluidWindVolumeComponent();
 
   void Update();
 

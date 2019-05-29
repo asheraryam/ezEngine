@@ -11,7 +11,7 @@ o
 		s %AssetType{"Scene"}
 		VarArray %Dependencies{}
 		Uuid %DocumentID{u4{11742573985409873049,5415679841540850662}}
-		u4 %Hash{18206072585910693924}
+		u4 %Hash{14193693299619336027}
 		VarArray %MetaInfo{}
 		VarArray %Outputs{}
 		VarArray %References
@@ -103,21 +103,6 @@ o
 }
 o
 {
-	Uuid %id{u4{10136183358086864317,4880895038883897368}}
-	s %t{"ezWindVolumeComponent"}
-	u3 %v{1}
-	p
-	{
-		b %Active{1}
-		f %CellsSize{0x0000803F}
-		u1 %CellsX{32}
-		u1 %CellsY{32}
-		u1 %CellsZ{4}
-		b %Visualize{0}
-	}
-}
-o
-{
 	Uuid %id{u4{12222148303189247672,5149959308683301769}}
 	s %t{"ezCameraComponent"}
 	u3 %v{9}
@@ -180,7 +165,7 @@ o
 		VarArray %Children{}
 		VarArray %Components
 		{
-			Uuid{u4{10136183358086864317,4880895038883897368}}
+			Uuid{u4{10885939643239282060,5444868475244168285}}
 		}
 		s %GlobalKey{""}
 		Vec3 %LocalPosition{f{0,0,0}}
@@ -194,6 +179,21 @@ o
 			s{"CastShadow"}
 			s{"AutoColMesh"}
 		}
+	}
+}
+o
+{
+	Uuid %id{u4{10885939643239282060,5444868475244168285}}
+	s %t{"ezFluidWindVolumeComponent"}
+	u3 %v{1}
+	p
+	{
+		b %Active{1}
+		f %CellsSize{0x0000003F}
+		u1 %CellsX{32}
+		u1 %CellsY{32}
+		u1 %CellsZ{4}
+		b %Visualize{0}
 	}
 }
 o
@@ -458,7 +458,7 @@ o
 }
 o
 {
-	Uuid %id{u4{3802525403579708175,3375945662181748738}}
+	Uuid %id{u4{861792270858559437,5942775037323952918}}
 	s %t{"ezReflectedTypeDescriptor"}
 	u3 %v{1}
 	p
@@ -469,7 +469,7 @@ o
 		s %ParentTypeName{"ezComponent"}
 		s %PluginName{"Static"}
 		VarArray %Properties{}
-		s %TypeName{"ezWindVolumeComponent"}
+		s %TypeName{"ezFluidWindVolumeComponent"}
 		u3 %TypeSize{296}
 		u3 %TypeVersion{1}
 	}

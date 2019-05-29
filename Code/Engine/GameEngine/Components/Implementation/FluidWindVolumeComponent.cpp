@@ -1,12 +1,12 @@
 #include <GameEnginePCH.h>
 
 #include <Foundation/Profiling/Profiling.h>
-#include <GameEngine/Components/WindVolumeComponent.h>
+#include <GameEngine/Components/FluidWindVolumeComponent.h>
 #include <RendererCore/Debug/DebugRenderer.h>
 
 #define AddForce(cell, force) cell = ezMath::Max(cell, force)
 
-void ezWindVolumeComponent::addStream(int x, int y, float force)
+void ezFluidWindVolumeComponent::addStream(int x, int y, float force)
 {
   if (m_FluidVolume.m_Simulation.IsVolumetric())
   {
@@ -29,7 +29,7 @@ void ezWindVolumeComponent::addStream(int x, int y, float force)
   }
 }
 
-void ezWindVolumeComponent::addDrop(int x, int y, float force)
+void ezFluidWindVolumeComponent::addDrop(int x, int y, float force)
 {
   if (m_FluidVolume.m_Simulation.IsVolumetric())
   {
@@ -69,7 +69,7 @@ void ezWindVolumeComponent::addDrop(int x, int y, float force)
 #include <Core/WorldSerializer/WorldWriter.h>
 
 // clang-format off
-EZ_BEGIN_COMPONENT_TYPE(ezWindVolumeComponent, 1, ezComponentMode::Static)
+EZ_BEGIN_COMPONENT_TYPE(ezFluidWindVolumeComponent, 1, ezComponentMode::Static)
 {
   EZ_BEGIN_PROPERTIES
   {
@@ -89,10 +89,10 @@ EZ_BEGIN_COMPONENT_TYPE(ezWindVolumeComponent, 1, ezComponentMode::Static)
 EZ_END_DYNAMIC_REFLECTED_TYPE;
 // clang-format on
 
-ezWindVolumeComponent::ezWindVolumeComponent() = default;
-ezWindVolumeComponent::~ezWindVolumeComponent() = default;
+ezFluidWindVolumeComponent::ezFluidWindVolumeComponent() = default;
+ezFluidWindVolumeComponent::~ezFluidWindVolumeComponent() = default;
 
-void ezWindVolumeComponent::SerializeComponent(ezWorldWriter& stream) const
+void ezFluidWindVolumeComponent::SerializeComponent(ezWorldWriter& stream) const
 {
   SUPER::SerializeComponent(stream);
   auto& s = stream.GetStream();
@@ -105,7 +105,7 @@ void ezWindVolumeComponent::SerializeComponent(ezWorldWriter& stream) const
   s << m_bVisualize;
 }
 
-void ezWindVolumeComponent::DeserializeComponent(ezWorldReader& stream)
+void ezFluidWindVolumeComponent::DeserializeComponent(ezWorldReader& stream)
 {
   SUPER::DeserializeComponent(stream);
   // const ezUInt32 uiVersion = stream.GetComponentTypeVersion(GetStaticRTTI());
@@ -122,7 +122,7 @@ void ezWindVolumeComponent::DeserializeComponent(ezWorldReader& stream)
 static int maxDrops = 20;
 static int maxStream = 500;
 
-void ezWindVolumeComponent::OnSimulationStarted()
+void ezFluidWindVolumeComponent::OnSimulationStarted()
 {
   EZ_ASSERT_DEV(m_pWindModule == nullptr, "Wind module should be null");
 
@@ -135,7 +135,7 @@ void ezWindVolumeComponent::OnSimulationStarted()
   m_pWindModule->AddWindVolume(&m_FluidVolume);
 }
 
-void ezWindVolumeComponent::OnDeactivated()
+void ezFluidWindVolumeComponent::OnDeactivated()
 {
   if (m_pWindModule != nullptr)
   {
@@ -144,7 +144,7 @@ void ezWindVolumeComponent::OnDeactivated()
   }
 }
 
-void ezWindVolumeComponent::Update()
+void ezFluidWindVolumeComponent::Update()
 {
   ezRandom rng;
   rng.InitializeFromCurrentTime();
