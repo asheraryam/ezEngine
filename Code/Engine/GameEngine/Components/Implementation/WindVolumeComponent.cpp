@@ -174,7 +174,7 @@ void ezWindVolumeComponent::Update()
 
   const ezTransform ownTransform = GetOwner()->GetGlobalTransform();
 
-  m_FluidVolume.m_Simulation.Step(ezTime::Milliseconds(100));
+  m_FluidVolume.m_Simulation.Update(GetWorld()->GetClock().GetTimeDiff());
   m_FluidVolume.m_vPosition = ownTransform.m_vPosition;
   m_FluidVolume.m_qRotation = ownTransform.m_qRotation;
 

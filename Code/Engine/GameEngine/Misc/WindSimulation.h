@@ -5,6 +5,7 @@
 #include <Foundation/Containers/DynamicArray.h>
 #include <Foundation/Math/Declarations.h>
 #include <Foundation/Time/Time.h>
+#include <Foundation/Threading/Implementation/TaskSystemDeclarations.h>
 
 class EZ_GAMEENGINE_DLL ezWindSimulation
 {
@@ -13,7 +14,7 @@ public:
   ~ezWindSimulation();
 
   void Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ = 1);
-  void Step(ezTime tDelta);
+  void Update(ezTime tDelta);
 
   float GetCellSize() const { return m_fCellSize; }
   float GetInverseCellSize() const { return m_fInverseCellSize; }
@@ -38,11 +39,13 @@ public:
   ezVec3 SampleVelocity3D(const ezVec3& vCellIdx) const;
 
 private:
+  void ComputeNextStep();
+
   ezTime m_UpdateStep;
   float m_fDampenFactor = 0.995f;
   float m_fCellSize = 1.0f;
   float m_fInverseCellSize = 1.0f;
-  float m_fUpdateFraction = 1.0f;
+  float m_fUpdateFraction = 0.0f;
 
   ezUInt16 m_uiSizeX = 0;
   ezUInt16 m_uiSizeY = 0;
@@ -55,6 +58,7 @@ private:
 
   ezUInt8 m_uiPrevVelocities = 0;
   ezUInt8 m_uiCurVelocities = 0;
+  ezUInt8 m_uiNextVelocities = 0;
 
   ezVec2* m_pVelocities2D[3] = {nullptr, nullptr, nullptr};
   ezVec2* m_pScratch2D = nullptr;
@@ -62,6 +66,9 @@ private:
   ezVec3* m_pVelocities3D[3] = {nullptr, nullptr, nullptr};
   ezVec3* m_pScratch3D = nullptr;
   ezVec3* m_pVelocityInputs3D = nullptr;
+
+  ezTaskGroupID m_UpdateTaskID;
+  ezUniquePtr<ezTask> m_pUpdateTask;
 
   ezDynamicArray<float> m_Values;
 };

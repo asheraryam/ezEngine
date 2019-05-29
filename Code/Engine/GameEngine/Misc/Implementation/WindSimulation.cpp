@@ -2,6 +2,8 @@
 
 #include <Foundation/Math/Vec3.h>
 #include <Foundation/Profiling/Profiling.h>
+#include <Foundation/Threading/DelegateTask.h>
+#include <Foundation/Threading/TaskSystem.h>
 #include <GameEngine/Misc/WindSimulation.h>
 
 #if 1
@@ -38,20 +40,24 @@
 
 namespace
 {
-  void CopyPreviousVelocity(ezVec2* pDst, const ezVec2* pSrc, const ezVec2* pInputs, ezUInt32 uiNumCells, float fDampenFactor)
+  void CopyPreviousVelocity(ezVec2* pDst, const ezVec2* pSrc, ezVec2* pInputs, ezUInt32 uiNumCells, float fDampenFactor)
   {
     for (ezUInt32 i = 0; i < uiNumCells; ++i)
     {
       pDst[i] = pSrc[i] * fDampenFactor + pInputs[i];
     }
+
+    ezMemoryUtils::ZeroFill(pInputs, uiNumCells);
   }
 
-  void CopyPreviousVelocity(ezVec3* pDst, const ezVec3* pSrc, const ezVec3* pInputs, ezUInt32 uiNumCells, float fDampenFactor)
+  void CopyPreviousVelocity(ezVec3* pDst, const ezVec3* pSrc, ezVec3* pInputs, ezUInt32 uiNumCells, float fDampenFactor)
   {
     for (ezUInt32 i = 0; i < uiNumCells; ++i)
     {
       pDst[i] = pSrc[i] * fDampenFactor + pInputs[i];
     }
+
+    ezMemoryUtils::ZeroFill(pInputs, uiNumCells);
   }
 
   void LinearSolve2D(float* pDst, const float* pPrev, const ezUInt16 uiSizeX, const ezUInt16 uiSizeY)
@@ -305,7 +311,7 @@ namespace
   }
 
   void StepWindSimulation2D(float deltaTime, float fDampenFactor, ezUInt16 uiSizeX, ezUInt16 uiSizeY, const ezVec2* pSrc, ezVec2* pDst,
-    const ezVec2* pInputs, ezVec2* pScratch)
+    ezVec2* pInputs, ezVec2* pScratch)
   {
     const ezUInt32 uiNumCells = (uiSizeX + 2) * (uiSizeY + 2);
 
@@ -317,7 +323,7 @@ namespace
   }
 
   void StepWindSimulation3D(float deltaTime, float fDampenFactor, ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ, const ezVec3* pSrc,
-    ezVec3* pDst, const ezVec3* pInputs, ezVec3* pScratch)
+    ezVec3* pDst, ezVec3* pInputs, ezVec3* pScratch)
   {
     const ezUInt32 uiNumCells = (uiSizeX + 2) * (uiSizeY + 2) * (uiSizeZ + 2);
 
@@ -332,7 +338,12 @@ namespace
 //////////////////////////////////////////////////////////////////////////
 
 ezWindSimulation::ezWindSimulation() = default;
-ezWindSimulation::~ezWindSimulation() = default;
+
+ezWindSimulation::~ezWindSimulation()
+{
+  // make sure to finish the update task before destroying the object
+  ezTaskSystem::WaitForGroup(m_UpdateTaskID);
+}
 
 void ezWindSimulation::Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 uiSizeY, ezUInt16 uiSizeZ /*= 1*/)
 {
@@ -394,43 +405,52 @@ void ezWindSimulation::Initialize(float fCellSize, ezUInt16 uiSizeX, ezUInt16 ui
   }
 }
 
-void ezWindSimulation::Step(ezTime tDelta)
+void ezWindSimulation::Update(ezTime tDelta)
 {
-  EZ_PROFILE_SCOPE("Wind Simulation");
+  EZ_PROFILE_SCOPE("Wind Simulation Update");
 
   const float fNewLerp = m_fUpdateFraction + tDelta.AsFloatInSeconds() / m_UpdateStep.AsFloatInSeconds();
 
   if (fNewLerp >= 1.0f)
   {
-    const float deltaTime = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
+    // wait for the previous update task to finish (usually it should be done already)
+    ezTaskSystem::WaitForGroup(m_UpdateTaskID);
 
-    const ezUInt8 uiNextVelocities = (m_uiCurVelocities + 1) % 3;
+    // update the current state indices
+    m_fUpdateFraction = ezMath::Clamp(fNewLerp - 1.0f, 0.0f, 1.0f);
+    m_uiPrevVelocities = m_uiCurVelocities;
+    m_uiCurVelocities = m_uiNextVelocities;
 
-    if (IsVolumetric())
+    m_uiNextVelocities = (m_uiCurVelocities + 1) % 3;
+
+    if (m_pUpdateTask == nullptr)
     {
-      StepWindSimulation3D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_uiSizeZ, m_pVelocities3D[m_uiCurVelocities],
-        m_pVelocities3D[uiNextVelocities], m_pVelocityInputs3D, m_pScratch3D);
-
-      ezMemoryUtils::ZeroFill(m_pVelocityInputs3D, m_uiNumCells);
-    }
-    else
-    {
-      StepWindSimulation2D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_pVelocities2D[m_uiCurVelocities],
-        m_pVelocities2D[uiNextVelocities], m_pVelocityInputs2D, m_pScratch2D);
-
-      ezMemoryUtils::ZeroFill(m_pVelocityInputs2D, m_uiNumCells);
+      m_pUpdateTask = EZ_DEFAULT_NEW(ezDelegateTask<void>, "FluidWindUpdate", ezMakeDelegate(&ezWindSimulation::ComputeNextStep, this));
     }
 
-    // TODO: this has to be thread-safe, at least if sampling should lerp between the data
-    {
-      m_fUpdateFraction = ezMath::Clamp(fNewLerp - 1.0f, 0.0f, 1.0f);
-      m_uiPrevVelocities = m_uiCurVelocities;
-      m_uiCurVelocities = uiNextVelocities;
-    }
+    // launch a task to compute the next result in parallel
+    // TODO: need more task priorities
+    m_UpdateTaskID = ezTaskSystem::StartSingleTask(m_pUpdateTask.Borrow(), ezTaskPriority::LateNextFrame);
   }
   else
   {
     m_fUpdateFraction = fNewLerp;
+  }
+}
+
+void ezWindSimulation::ComputeNextStep()
+{
+  const float deltaTime = m_UpdateStep.AsFloatInSeconds() / m_fCellSize;
+
+  if (IsVolumetric())
+  {
+    StepWindSimulation3D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_uiSizeZ, m_pVelocities3D[m_uiCurVelocities],
+      m_pVelocities3D[m_uiNextVelocities], m_pVelocityInputs3D, m_pScratch3D);
+  }
+  else
+  {
+    StepWindSimulation2D(deltaTime, m_fDampenFactor, m_uiSizeX, m_uiSizeY, m_pVelocities2D[m_uiCurVelocities],
+      m_pVelocities2D[m_uiNextVelocities], m_pVelocityInputs2D, m_pScratch2D);
   }
 }
 

@@ -11,12 +11,13 @@ o
 		s %AssetType{"Scene"}
 		VarArray %Dependencies{}
 		Uuid %DocumentID{u4{11742573985409873049,5415679841540850662}}
-		u4 %Hash{4060856230924721169}
+		u4 %Hash{18206072585910693924}
 		VarArray %MetaInfo{}
 		VarArray %Outputs{}
 		VarArray %References
 		{
 			s{"{ 0b202e08-a64f-465d-b38e-15b81d161822 }"}
+			s{"{ 4e401409-84a4-47bf-937d-b5248bbd9345 }"}
 			s{"{ 618ee743-ed04-4fac-bf5f-572939db2f1d }"}
 			s{"{ b692dd6a-56a1-45cb-b22c-f3496380aeff }"}
 		}
@@ -84,6 +85,24 @@ o
 }
 o
 {
+	Uuid %id{u4{11822667062774676634,4844106115865704094}}
+	s %t{"ezParticleComponent"}
+	u3 %v{3}
+	p
+	{
+		b %Active{1}
+		s %Effect{"{ 4e401409-84a4-47bf-937d-b5248bbd9345 }"}
+		Time %MinRestartDelay{d{0}}
+		s %OnFinishedAction{"ezOnComponentFinishedAction2::None"}
+		VarDict %Parameters{}
+		u4 %RandomSeed{0}
+		Time %RestartDelayRange{d{0}}
+		s %SharedInstanceName{""}
+		b %SpawnAtStart{1}
+	}
+}
+o
+{
 	Uuid %id{u4{10136183358086864317,4880895038883897368}}
 	s %t{"ezWindVolumeComponent"}
 	u3 %v{1}
@@ -91,10 +110,10 @@ o
 	{
 		b %Active{1}
 		f %CellsSize{0x0000803F}
-		u1 %CellsX{64}
-		u1 %CellsY{64}
+		u1 %CellsX{32}
+		u1 %CellsY{32}
 		u1 %CellsZ{4}
-		b %Visualize{1}
+		b %Visualize{0}
 	}
 }
 o
@@ -164,7 +183,7 @@ o
 			Uuid{u4{10136183358086864317,4880895038883897368}}
 		}
 		s %GlobalKey{""}
-		Vec3 %LocalPosition{f{0x00000041,0x0000B040,0}}
+		Vec3 %LocalPosition{f{0,0,0}}
 		Quat %LocalRotation{f{0,0,0,0x0000803F}}
 		Vec3 %LocalScaling{f{0x0000803F,0x0000803F,0x0000803F}}
 		f %LocalUniformScaling{0x0000803F}
@@ -193,6 +212,32 @@ o
 		s %GlobalKey{""}
 		Vec3 %LocalPosition{f{0,0,0x00000040}}
 		Quat %LocalRotation{f{0xBD2BA7BE,0xBD2BA73E,0xEC90203F,0xEC90203F}}
+		Vec3 %LocalScaling{f{0x0000803F,0x0000803F,0x0000803F}}
+		f %LocalUniformScaling{0x0000803F}
+		s %Mode{"ezObjectMode::Automatic"}
+		s %Name{""}
+		VarArray %Tags
+		{
+			s{"CastShadow"}
+			s{"AutoColMesh"}
+		}
+	}
+}
+o
+{
+	Uuid %id{u4{4560065758129613748,5509645477689037432}}
+	s %t{"ezGameObject"}
+	u3 %v{1}
+	p
+	{
+		VarArray %Children{}
+		VarArray %Components
+		{
+			Uuid{u4{11822667062774676634,4844106115865704094}}
+		}
+		s %GlobalKey{""}
+		Vec3 %LocalPosition{f{0,0,0}}
+		Quat %LocalRotation{f{0,0,0,0x0000803F}}
 		Vec3 %LocalScaling{f{0x0000803F,0x0000803F,0x0000803F}}
 		f %LocalUniformScaling{0x0000803F}
 		s %Mode{"ezObjectMode::Automatic"}
@@ -287,6 +332,7 @@ o
 			Uuid{u4{12884970298231852454,5491827920573293570}}
 			Uuid{u4{4337876654279434151,5336228392688012110}}
 			Uuid{u4{12195029497669834241,13385685837536558931}}
+			Uuid{u4{4560065758129613748,5509645477689037432}}
 		}
 		Uuid %Settings{u4{124404277471352244,4640187406944891106}}
 	}
@@ -322,7 +368,7 @@ o
 			Uuid{u4{1803512698901952255,12938405658084785318}}
 		}
 		s %GlobalKey{""}
-		Vec3 %LocalPosition{f{0x042D1141,0x1F15A240,0xEEC559C0}}
+		Vec3 %LocalPosition{f{0,0,0xEFC559C0}}
 		Quat %LocalRotation{f{0,0,0,0x0000803F}}
 		Vec3 %LocalScaling{f{0x0000803F,0x0000803F,0x0000803F}}
 		f %LocalUniformScaling{0x0000803F}
@@ -424,7 +470,7 @@ o
 		s %PluginName{"Static"}
 		VarArray %Properties{}
 		s %TypeName{"ezWindVolumeComponent"}
-		u3 %TypeSize{272}
+		u3 %TypeSize{296}
 		u3 %TypeVersion{1}
 	}
 }
