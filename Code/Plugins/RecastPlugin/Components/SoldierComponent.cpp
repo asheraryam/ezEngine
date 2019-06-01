@@ -2,12 +2,12 @@
 
 #include <Core/WorldSerializer/WorldReader.h>
 #include <Core/WorldSerializer/WorldWriter.h>
-#include <GameEngine/Components/AgentSteeringComponent.h>
+#include <GameEngine/AI/AgentSteeringComponent.h>
 #include <GameEngine/Interfaces/PhysicsWorldModule.h>
+#include <Recast/DetourCrowd.h>
 #include <RecastPlugin/Components/SoldierComponent.h>
 #include <RecastPlugin/WorldModule/RecastWorldModule.h>
 #include <RendererCore/Debug/DebugRenderer.h>
-#include <Recast/DetourCrowd.h>
 
 //////////////////////////////////////////////////////////////////////////
 

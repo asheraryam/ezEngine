@@ -11,7 +11,7 @@ o
 		s %AssetType{"Scene"}
 		VarArray %Dependencies{}
 		Uuid %DocumentID{u4{11742573985409873049,5415679841540850662}}
-		u4 %Hash{14193693299619336027}
+		u4 %Hash{5940927715564771284}
 		VarArray %MetaInfo{}
 		VarArray %Outputs{}
 		VarArray %References
@@ -81,6 +81,32 @@ o
 		f %PenumbraSize{0xCDCCCC3D}
 		f %SlopeBias{0x0000803E}
 		f %SplitModeWeight{0x3333333F}
+	}
+}
+o
+{
+	Uuid %id{u4{479682937065948343,4776453100011562908}}
+	s %t{"ezGameObject"}
+	u3 %v{1}
+	p
+	{
+		VarArray %Children{}
+		VarArray %Components
+		{
+			Uuid{u4{15517634472323177629,5351359090145955161}}
+		}
+		s %GlobalKey{""}
+		Vec3 %LocalPosition{f{0x947A24C0,0x68FD3040,0x42A8C734}}
+		Quat %LocalRotation{f{0,0,0,0x0000803F}}
+		Vec3 %LocalScaling{f{0x0000803F,0x0000803F,0x0000803F}}
+		f %LocalUniformScaling{0x0000803F}
+		s %Mode{"ezObjectMode::Automatic"}
+		s %Name{""}
+		VarArray %Tags
+		{
+			s{"CastShadow"}
+			s{"AutoColMesh"}
+		}
 	}
 }
 o
@@ -183,6 +209,18 @@ o
 }
 o
 {
+	Uuid %id{u4{15517634472323177629,5351359090145955161}}
+	s %t{"ezWindForceComponent"}
+	u3 %v{1}
+	p
+	{
+		b %Active{1}
+		f %Radius{0x00000040}
+		f %Strength{0x0000803F}
+	}
+}
+o
+{
 	Uuid %id{u4{10885939643239282060,5444868475244168285}}
 	s %t{"ezFluidWindVolumeComponent"}
 	u3 %v{1}
@@ -193,7 +231,7 @@ o
 		u1 %CellsX{32}
 		u1 %CellsY{32}
 		u1 %CellsZ{4}
-		b %Visualize{0}
+		b %Visualize{1}
 	}
 }
 o
@@ -333,6 +371,7 @@ o
 			Uuid{u4{4337876654279434151,5336228392688012110}}
 			Uuid{u4{12195029497669834241,13385685837536558931}}
 			Uuid{u4{4560065758129613748,5509645477689037432}}
+			Uuid{u4{479682937065948343,4776453100011562908}}
 		}
 		Uuid %Settings{u4{124404277471352244,4640187406944891106}}
 	}
@@ -741,6 +780,24 @@ o
 		VarArray %Properties{}
 		s %TypeName{"ezEnumBase"}
 		u3 %TypeSize{1}
+		u3 %TypeVersion{1}
+	}
+}
+o
+{
+	Uuid %id{u4{15317152813912285702,15539680020204247546}}
+	s %t{"ezReflectedTypeDescriptor"}
+	u3 %v{1}
+	p
+	{
+		VarArray %Attributes{}
+		s %Flags{"ezTypeFlags::Class|ezTypeFlags::Minimal"}
+		VarArray %Functions{}
+		s %ParentTypeName{"ezComponent"}
+		s %PluginName{"Static"}
+		VarArray %Properties{}
+		s %TypeName{"ezWindForceComponent"}
+		u3 %TypeSize{64}
 		u3 %TypeVersion{1}
 	}
 }

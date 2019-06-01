@@ -1,8 +1,9 @@
 #pragma once
 
+#include <GameEngine/GameEngineDLL.h>
+
 #include <Core/World/Component.h>
 #include <Core/World/World.h>
-#include <GameEngine/GameEngineDLL.h>
 
 typedef ezComponentManagerSimple<class ezSimpleWindComponent, ezComponentUpdateType::WhenSimulating> ezSimpleWindComponentManager;
 

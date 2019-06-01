@@ -2,8 +2,8 @@
 
 #include <GameEngine/GameEngineDLL.h>
 
-#include <Core/World/World.h>
 #include <Core/World/Component.h>
+#include <Core/World/World.h>
 #include <GameEngine/Effects/Wind/WindSimulation.h>
 #include <GameEngine/Interfaces/WindWorldModule.h>
 
@@ -13,6 +13,7 @@ class ezFluidWindVolume : public ezWindVolume
 {
 public:
   virtual ezResult GetWindAt(const ezVec3& vGlobalPosition, ezVec3& out_vWind) override;
+  virtual void ApplyForceSphere(const ezVec3& vCenter, float fRadius, float fStrength) override;
 
   ezVec3 m_vPosition;
   ezQuat m_qRotation;
@@ -42,12 +43,8 @@ public:
   bool m_bVisualize = false;
 
 protected:
-   
   virtual void OnSimulationStarted() override;
   virtual void OnDeactivated() override;
-
-  void addStream(int x, int y, float force);
-  void addDrop(int x, int y, float force);
 
   ezWindWorldModuleInterface* m_pWindModule = nullptr;
   ezFluidWindVolume m_FluidVolume;

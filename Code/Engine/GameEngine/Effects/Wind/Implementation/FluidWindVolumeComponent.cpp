@@ -4,67 +4,6 @@
 #include <GameEngine/Effects/Wind/FluidWindVolumeComponent.h>
 #include <RendererCore/Debug/DebugRenderer.h>
 
-#define AddForce(cell, force) cell = ezMath::Max(cell, force)
-
-void ezFluidWindVolumeComponent::addStream(int x, int y, float force)
-{
-  if (m_FluidVolume.m_Simulation.IsVolumetric())
-  {
-    ezVec3* vel = m_FluidVolume.m_Simulation.GetVelocityInputs3D();
-    const int z = m_FluidVolume.m_Simulation.GetSizeZ() / 2;
-
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y, z)], ezVec3(force, 0, 0));
-
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)], ezVec3(force * 0.7f, force * 0.7f, 0));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)], ezVec3(force * 0.7f, -force * 0.7f, 0));
-  }
-  else
-  {
-    ezVec2* vel = m_FluidVolume.m_Simulation.GetVelocityInputs2D();
-
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y)], ezVec2(force, 0));
-
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1)], ezVec2(force * 0.7f, force * 0.7f));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1)], ezVec2(force * 0.7f, -force * 0.7f));
-  }
-}
-
-void ezFluidWindVolumeComponent::addDrop(int x, int y, float force)
-{
-  if (m_FluidVolume.m_Simulation.IsVolumetric())
-  {
-    ezVec3* vel = m_FluidVolume.m_Simulation.GetVelocityInputs3D();
-    const int z = m_FluidVolume.m_Simulation.GetSizeZ() / 2;
-
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y, z)], ezVec3(-force, 0, 0));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y, z)], ezVec3(+force, 0, 0));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x, y - 1, z)], ezVec3(0, -force, 0));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x, y + 1, z)], ezVec3(0, +force, 0));
-
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y - 1, z)], ezVec3(-force * 0.7f, +force * 0.7f, 0));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1, z)], ezVec3(+force * 0.7f, +force * 0.7f, 0));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1, z)], ezVec3(+force * 0.7f, -force * 0.7f, 0));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y + 1, z)], ezVec3(-force * 0.7f, -force * 0.7f, 0));
-  }
-  else
-  {
-    ezVec2* vel = m_FluidVolume.m_Simulation.GetVelocityInputs2D();
-
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y)], ezVec2(-force, 0));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y)], ezVec2(+force, 0));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x, y - 1)], ezVec2(0, -force));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x, y + 1)], ezVec2(0, +force));
-
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y - 1)], ezVec2(-force * 0.7f, +force * 0.7f));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y - 1)], ezVec2(+force * 0.7f, +force * 0.7f));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x + 1, y + 1)], ezVec2(+force * 0.7f, -force * 0.7f));
-    AddForce(vel[m_FluidVolume.m_Simulation.Idx(x - 1, y + 1)], ezVec2(-force * 0.7f, -force * 0.7f));
-  }
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-
 #include <Core/WorldSerializer/WorldReader.h>
 #include <Core/WorldSerializer/WorldWriter.h>
 
@@ -82,7 +21,7 @@ EZ_BEGIN_COMPONENT_TYPE(ezFluidWindVolumeComponent, 1, ezComponentMode::Static)
   EZ_END_PROPERTIES;
   EZ_BEGIN_ATTRIBUTES
   {
-    new ezCategoryAttribute("Effects"),
+    new ezCategoryAttribute("Effects/Wind"),
   }
   EZ_END_ATTRIBUTES;
 }
@@ -146,32 +85,6 @@ void ezFluidWindVolumeComponent::OnDeactivated()
 
 void ezFluidWindVolumeComponent::Update()
 {
-  ezRandom rng;
-  rng.InitializeFromCurrentTime();
-
-  {
-    if (rng.UIntInRange(100) < 1)
-    {
-      if (maxDrops > 0)
-      {
-        maxDrops--;
-        addDrop(rng.UIntInRange(m_FluidVolume.m_Simulation.GetSizeX() - 4) + 2,
-          rng.UIntInRange(m_FluidVolume.m_Simulation.GetSizeY() - 4) + 2,
-          rng.FloatMinMax(m_FluidVolume.m_Simulation.GetCellSize() * 1000.0f, m_FluidVolume.m_Simulation.GetCellSize() * 10000.0f));
-      }
-    }
-  }
-
-  {
-
-    if (maxStream > 0)
-    {
-      maxStream--;
-      addStream(
-        10, 32, rng.FloatMinMax(m_FluidVolume.m_Simulation.GetCellSize() * 20.0f, m_FluidVolume.m_Simulation.GetCellSize() * 100.0f));
-    }
-  }
-
   const ezTransform ownTransform = GetOwner()->GetGlobalTransform();
 
   m_FluidVolume.m_Simulation.Update(GetWorld()->GetClock().GetTimeDiff());
@@ -258,6 +171,8 @@ void ezFluidWindVolumeComponent::Update()
   }
 }
 
+//////////////////////////////////////////////////////////////////////////
+
 ezResult ezFluidWindVolume::GetWindAt(const ezVec3& vGlobalPosition, ezVec3& out_vWind)
 {
   const ezVec3 vLocalPos = -m_qRotation * (vGlobalPosition - m_vPosition);
@@ -271,4 +186,63 @@ ezResult ezFluidWindVolume::GetWindAt(const ezVec3& vGlobalPosition, ezVec3& out
   out_vWind *= 10.0f;
 
   return EZ_SUCCESS;
+}
+
+void ezFluidWindVolume::ApplyForceSphere(const ezVec3& vCenter0, float fRadius, float fStrength)
+{
+  const ezVec3 vCenter = vCenter0 - m_vPosition;
+
+  const float fCellSize = m_Simulation.GetCellSize();
+  const ezInt32 iRadius = ezMath::Ceil(fRadius / fCellSize);
+  const ezInt32 iSize = iRadius * 2;
+
+  ezDynamicArray<ezVec3> samplePoints;
+  samplePoints.Reserve(iSize * iSize * iSize * 3 / 4);
+
+  const float fRadiusSqr = ezMath::Square(fRadius);
+
+  for (ezInt32 z = -iRadius; z <= +iRadius; ++z)
+  {
+    for (ezInt32 y = -iRadius; y <= +iRadius; ++y)
+    {
+      for (ezInt32 x = -iRadius; x <= +iRadius; ++x)
+      {
+        const ezVec3 pos(x * fCellSize, y * fCellSize, z * fCellSize);
+
+        if (pos.GetLengthSquared() < fRadiusSqr)
+          samplePoints.PushBack(pos);
+      }
+    }
+  }
+
+  const ezVec3 vLocalCenter = m_Simulation.MapPositionToCellIdx(vCenter);
+
+
+  for (const ezVec3 pos : samplePoints)
+  {
+    ezVec3 finalPos = vCenter + pos;
+
+    const ezVec3 cellIdx = m_Simulation.MapPositionToCellIdx(finalPos);
+    ezVec3 snappedPos;
+    snappedPos.x = ezMath::Floor(cellIdx.x);
+    snappedPos.y = ezMath::Floor(cellIdx.y);
+    snappedPos.z = ezMath::Floor(cellIdx.z);
+
+    if (snappedPos.x < 0 || snappedPos.x >= m_Simulation.GetSizeX())
+      continue;
+    if (snappedPos.y < 0 || snappedPos.y >= m_Simulation.GetSizeY())
+      continue;
+    if (snappedPos.z < 0 || snappedPos.z >= m_Simulation.GetSizeZ())
+      continue;
+
+    ezVec3 dir = snappedPos - vLocalCenter;
+    if (dir.NormalizeIfNotZero(ezVec3::ZeroVector()).Failed())
+      continue;
+
+    dir *= fStrength;
+
+    ezUInt32 idx = m_Simulation.Idx(snappedPos.x, snappedPos.y, snappedPos.z);
+    ezVec3& vel = m_Simulation.GetVelocityInputs3D()[idx];
+    vel = dir;
+  }
 }

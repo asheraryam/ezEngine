@@ -1,12 +1,15 @@
 #pragma once
 
-#include <Core/World/WorldModule.h>
 #include <GameEngine/GameEngineDLL.h>
+
+#include <Core/World/WorldModule.h>
 
 class ezWindVolume
 {
 public:
   virtual ezResult GetWindAt(const ezVec3& vGlobalPosition, ezVec3& out_vWind) = 0;
+
+  virtual void ApplyForceSphere(const ezVec3& vCenter, float fRadius, float fStrength) = 0;
 };
 
 class EZ_GAMEENGINE_DLL ezWindWorldModuleInterface : public ezWorldModule
@@ -25,6 +28,8 @@ public:
 
   void AddWindVolume(ezWindVolume* pVolume);
   void RemoveWindVolume(ezWindVolume* pVolume);
+
+  virtual void ApplyForceSphere(const ezVec3& vCenter, float fRadius, float fStrength);
 
 private:
   ezVec3 m_vFallbackWind;

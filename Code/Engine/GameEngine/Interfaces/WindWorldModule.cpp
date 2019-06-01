@@ -51,5 +51,13 @@ void ezWindWorldModuleInterface::RemoveWindVolume(ezWindVolume* pVolume)
   m_WindVolumes.RemoveAndSwap(pVolume);
 }
 
+void ezWindWorldModuleInterface::ApplyForceSphere(const ezVec3& vCenter, float fRadius, float fStrength)
+{
+  for (auto pVolume : m_WindVolumes)
+  {
+    pVolume->ApplyForceSphere(vCenter, fRadius, fStrength);
+  }
+}
+
 EZ_STATICLINK_FILE(GameEngine, GameEngine_Interfaces_WindWorldModule);
 

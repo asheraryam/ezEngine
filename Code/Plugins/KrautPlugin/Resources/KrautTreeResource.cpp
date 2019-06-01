@@ -1,7 +1,7 @@
 #include <KrautPluginPCH.h>
 
 #include <Core/Assets/AssetFileHeader.h>
-#include <GameEngine/Surfaces/SurfaceResource.h>
+#include <GameEngine/Physics/SurfaceResource.h>
 #include <KrautPlugin/Resources/KrautTreeResource.h>
 #include <RendererCore/Material/MaterialResource.h>
 #include <RendererCore/Meshes/MeshResource.h>

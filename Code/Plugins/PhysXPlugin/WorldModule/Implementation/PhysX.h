@@ -3,9 +3,9 @@
 #include <Foundation/Configuration/Plugin.h>
 #include <Foundation/Configuration/Singleton.h>
 #include <Foundation/Memory/CommonAllocators.h>
-#include <GameEngine/CollisionFilter/CollisionFilter.h>
 #include <GameEngine/Interfaces/PhysicsWorldModule.h>
-#include <GameEngine/Surfaces/SurfaceResource.h>
+#include <GameEngine/Physics/CollisionFilter.h>
+#include <GameEngine/Physics/SurfaceResource.h>
 #include <PhysXPlugin/PhysXInterface.h>
 
 #include <PxPhysicsAPI.h>
