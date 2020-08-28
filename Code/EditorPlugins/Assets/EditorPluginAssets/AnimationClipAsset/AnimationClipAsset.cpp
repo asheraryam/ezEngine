@@ -22,7 +22,7 @@ EZ_BEGIN_DYNAMIC_REFLECTED_TYPE(ezAnimationClipAssetProperties, 2, ezRTTIDefault
 {
   EZ_BEGIN_PROPERTIES
   {
-    EZ_MEMBER_PROPERTY("File", m_sSourceFile)->AddAttributes(new ezFileBrowserAttribute("Select Animation", "*.fbx")),
+    EZ_MEMBER_PROPERTY("File", m_sSourceFile)->AddAttributes(new ezFileBrowserAttribute("Select Animation", "*.fbx;*.gltf")),
     EZ_MEMBER_PROPERTY("UseAnimationClip", m_sAnimationClipToExtract),
     EZ_ARRAY_MEMBER_PROPERTY("AvailableClips", m_AvailableClips)->AddAttributes(new ezReadOnlyAttribute),
     EZ_MEMBER_PROPERTY("FirstFrame", m_uiFirstFrame),
@@ -295,6 +295,7 @@ EZ_END_DYNAMIC_REFLECTED_TYPE;
 ezAnimationClipAssetDocumentGenerator::ezAnimationClipAssetDocumentGenerator()
 {
   AddSupportedFileType("fbx");
+  AddSupportedFileType("gltf");
 }
 
 ezAnimationClipAssetDocumentGenerator::~ezAnimationClipAssetDocumentGenerator() = default;

@@ -224,6 +224,7 @@ ezMeshAssetDocumentGenerator::ezMeshAssetDocumentGenerator()
   AddSupportedFileType("fbx");
   AddSupportedFileType("ply");
   AddSupportedFileType("blend");
+  AddSupportedFileType("gltf");
 }
 
 ezMeshAssetDocumentGenerator::~ezMeshAssetDocumentGenerator() {}

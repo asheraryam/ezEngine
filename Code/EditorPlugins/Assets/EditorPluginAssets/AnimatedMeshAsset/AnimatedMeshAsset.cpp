@@ -104,6 +104,7 @@ EZ_END_DYNAMIC_REFLECTED_TYPE;
 ezAnimatedMeshAssetDocumentGenerator::ezAnimatedMeshAssetDocumentGenerator()
 {
   AddSupportedFileType("fbx");
+  AddSupportedFileType("gltf");
 }
 
 ezAnimatedMeshAssetDocumentGenerator::~ezAnimatedMeshAssetDocumentGenerator() {}
